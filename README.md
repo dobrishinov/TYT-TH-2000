@@ -37,7 +37,9 @@ test the cable are in [docs/CABLE.md](docs/CABLE.md).
 ### 2. Program the radio
 
 Open the hosted page above in Chrome or Edge — Web Serial is needed and Firefox
-does not have it. Or run it yourself:
+does not have it. TH-2000 CPS in your browser: https://dobrishinov.github.io/TYT-TH-2000/
+
+Or run it yourself:
 
 ```bash
 cd site && python3 -m http.server 8000
