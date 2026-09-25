@@ -1,0 +1,27 @@
+TH-2000 CPS
+Copyright 2026 Georgi Dobrishinov (LZ1WOW)
+
+This product includes software developed by the copyright holder,
+licensed under the Apache License, Version 2.0. See LICENSE.
+
+TWO PARTS ARE NOT UNDER THAT LICENCE
+------------------------------------
+
+chirp/tyt_th2000.py
+    GPL-2.0-or-later. This file is a CHIRP driver: it imports from and
+    subclasses CHIRP (https://chirpmyradio.com), which is GPLv2-or-later,
+    so the driver is a derivative work and must carry the same terms. It
+    cannot be relicensed to Apache 2.0.
+
+    Apache 2.0 and GPLv2 are not compatible, but this file is "v2 or
+    later", so anyone combining it with Apache 2.0 code may do so under
+    GPLv3, with which Apache 2.0 is compatible. Keeping the file separate
+    - it is a standalone module loaded by CHIRP - avoids the question in
+    normal use.
+
+reference/
+    Files extracted from the manufacturer's installer, the property of
+    TYT (Quanzhou TYT Electronics). Included for interoperability work
+    under the right to study and reverse engineer for compatibility.
+    They are NOT covered by the Apache licence above, and must not be
+    redistributed as part of any release you make.

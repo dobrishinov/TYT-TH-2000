@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TH-2000 compare</title>
+<style>
+:root{
+  --panel:#E4E8EA; --face:#EFF2F3; --recess:#C9D1D6; --edge:#AEB9C0;
+  --ink:#171C21; --ink-2:#5A6670; --ink-3:#8794A0;
+  --rx:#0E6E86; --tx:#BE3227; --warn:#8A5A10; --warn-bg:#F5E6C8;
+  --surface:#fff; --line:#DDE2E5;
+  --row-hover:#DCE4E8; --row-sel:#CBDDE3;
+  --btn-a:#fff; --btn-b:#E7EBED; --btn-hover-b:#DCE2E5;
+  --bad-bg:#FBEDEB; --bad-ink:#8C241C;
+  --good-bg:#E6F1F3; --good-ink:#0B5566;
+  --shadow:rgba(0,0,0,.18); --drop-over:#DCE9ED; --sheen:#fff;
+
+  color-scheme:light;
+  accent-color:#0E6E86;
+
+  --mono:ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark; accent-color:#4FB4CE;
+  --panel:#191F24; --face:#212930; --recess:#2A333A; --edge:#3B464E;
+  --ink:#E3E9ED; --ink-2:#A3B0B9; --ink-3:#7A8892;
+  --rx:#4FB4CE; --tx:#E4685D; --warn:#D8A756; --warn-bg:#3A3122;
+  --surface:#1A2126; --line:#333D45;
+  --row-hover:#2A343B; --row-sel:#28414A;
+  --btn-a:#2B343B; --btn-b:#232B31; --btn-hover-b:#313B43;
+  --bad-bg:#3A2523; --bad-ink:#F0A69D;
+  --good-bg:#13333B; --good-ink:#8FD3E4;
+  --shadow:rgba(0,0,0,.55); --drop-over:#22343A; --sheen:rgba(255,255,255,.05);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--panel);color:var(--ink);font:14px/1.45 var(--ui);
+  display:flex;flex-direction:column}
+.legend{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--rx);outline-offset:2px}
+
+.panel{background:var(--face);border-bottom:1px solid var(--edge);padding:10px 16px;
+  display:flex;gap:14px 18px;align-items:center;flex-wrap:wrap}
+.plate{display:flex;flex-direction:column;line-height:1.15}
+.plate b{font:600 16px/1.1 var(--mono)}
+.plate span{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.btn{border:1px solid var(--edge);background:linear-gradient(var(--btn-a),var(--btn-b));border-radius:3px;
+  padding:6px 12px;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.btn:hover:not(:disabled){background:linear-gradient(var(--btn-a),var(--btn-hover-b))}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn.go{color:var(--rx);border-color:#8FB4BF}
+.spacer{flex:1}
+
+main{flex:1;display:flex;flex-direction:column;min-height:0;overflow:auto}
+
+/* two panes */
+.panes{display:grid;grid-template-columns:1fr auto 1fr;gap:0;border-bottom:1px solid var(--edge)}
+.pane{padding:12px 16px;min-width:0}
+.pane.right{border-left:1px solid var(--edge)}
+.swapwrap{display:flex;align-items:center;padding:0 8px;background:var(--face);
+  border-left:1px solid var(--edge)}
+.drop{border:2px dashed var(--edge);border-radius:4px;padding:18px 14px;text-align:center;
+  background:var(--face);cursor:pointer;transition:background .12s,border-color .12s}
+.drop.over{border-color:var(--rx);background:var(--drop-over)}
+.drop.loaded{border-style:solid;background:var(--surface);text-align:left;padding:12px 14px}
+.drop h3{margin:0 0 3px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.drop .fn{font:600 13px/1.3 var(--mono);word-break:break-all}
+.drop dl{margin:8px 0 0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11.5px}
+.drop dt{color:var(--ink-3)}
+.drop dd{margin:0;font-family:var(--mono);font-size:11.5px}
+.tagline{margin:6px 0 0;font-size:11px;color:var(--ink-3)}
+.protected{color:var(--warn)}
+@media(prefers-reduced-motion:reduce){.drop{transition:none}}
+
+/* diff */
+section.block{padding:12px 16px;border-bottom:1px solid var(--edge)}
+section.block h2{margin:0 0 8px;font-size:10px;font-weight:600;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-2);display:flex;align-items:center;gap:12px}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.controls label{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-2)}
+table{border-collapse:collapse;width:100%;font:11.5px/1.5 var(--mono)}
+thead th{position:sticky;top:0;background:var(--recess);border-bottom:1px solid var(--edge);
+  padding:5px 8px;text-align:left;white-space:nowrap;
+  font:600 10px/1.4 var(--ui);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2)}
+tbody td{padding:2px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--row-hover)}
+tbody tr.pick{background:var(--row-sel)}
+.tablewrap{max-height:320px;overflow:auto;border:1px solid var(--edge);background:var(--surface)}
+.empty{padding:22px 14px;text-align:center;color:var(--ink-3);font-size:12.5px}
+.bits{color:var(--tx)}
+.val{color:var(--rx)}
+
+/* record + log */
+.record{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.record .f{flex:1;min-width:240px;display:flex;flex-direction:column;gap:3px}
+.record label{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.record input{border:1px solid var(--edge);border-radius:2px;padding:6px 8px;font:13px/1.2 var(--ui);background:var(--surface);color:inherit}
+.hint{margin:8px 0 0;font-size:11.5px;color:var(--ink-2)}
+.log{margin:0;padding:0;list-style:none}
+.log li{border:1px solid var(--edge);background:var(--surface);border-radius:3px;padding:8px 10px;margin-bottom:6px}
+.log .what{font-weight:600;font-size:13px}
+.log .meta{font-size:11px;color:var(--ink-3);margin-top:2px}
+.log pre{margin:6px 0 0;font:11px/1.5 var(--mono);white-space:pre;overflow:auto;
+  background:var(--face);border:1px solid var(--edge);padding:6px 8px;max-height:150px}
+.log .rm{float:right;border:0;background:transparent;cursor:pointer;color:var(--ink-3);
+  font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.log .rm:hover{color:var(--tx)}
+.note{margin:0 0 10px;padding:7px 9px;border-left:3px solid var(--warn);background:var(--warn-bg);
+  font-size:11.5px;color:var(--warn)}
+.status{border-top:1px solid var(--edge);background:var(--face);padding:7px 16px;font-size:12px}
+.status.bad{background:var(--bad-bg);color:var(--bad-ink)}
+.status.good{background:var(--good-bg);color:var(--good-ink)}
+.file{display:none}
+@media(max-width:900px){.panes{grid-template-columns:1fr}.pane.right,.swapwrap{border-left:0;border-top:1px solid var(--edge)}}
+</style>
+</head>
+<body>
+
+<header class="panel">
+  <div class="plate"><b>TH-2000 compare</b><span>codeplug mapping notebook</span></div>
+  <span class="spacer"></span>
+  <span class="legend" id="count">no observations yet</span>
+  <button class="btn" id="btnExport" disabled>Export log</button>
+  <button class="btn" id="btnClearLog" disabled>Clear log</button>
+</header>
+
+<main>
+  <div class="panes">
+    <div class="pane">
+      <div class="drop" id="dropA" tabindex="0" role="button" aria-label="Load the baseline codeplug">
+        <h3>Left &mdash; baseline</h3>
+        <p class="tagline">Drop your original backup here, or click to browse.</p>
+        <p class="tagline protected">Nothing is ever written to these files.</p>
+      </div>
+    </div>
+    <div class="swapwrap"><button class="btn" id="btnSwap" disabled title="Swap the two sides">&#8646;</button></div>
+    <div class="pane right">
+      <div class="drop" id="dropB" tabindex="0" role="button" aria-label="Load the changed codeplug">
+        <h3>Right &mdash; after your change</h3>
+        <p class="tagline">Drop the file you saved after changing one setting.</p>
+      </div>
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>Differences <span class="legend" id="diffCount"></span></h2>
+    <div class="controls">
+      <label><input type="checkbox" id="chkSkipCh" checked> Hide channel bytes</label>
+      <label><input type="checkbox" id="chkOnlyPicked"> Record only ticked rows</label>
+      <button class="btn" id="btnAll">Tick all</button>
+      <button class="btn" id="btnNone">Tick none</button>
+      <button class="btn" id="btnPromote" disabled title="Use the right-hand file as the new baseline">Right &rarr; baseline</button>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th></th><th>Address</th><th>Offset</th><th>Region</th><th>Before</th><th>After</th><th>Bits</th><th>Value</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="emptyMsg">Load a file on each side to see what differs.</div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Record what you changed</h2>
+    <div class="record">
+      <div class="f">
+        <label for="what">What did you change in the manufacturer's software?</label>
+        <input id="what" placeholder="e.g. Squelch level 0 to 3" autocomplete="off">
+      </div>
+      <button class="btn go" id="btnRecord" disabled>Record</button>
+    </div>
+    <p class="hint">One setting per comparison gives the cleanest answer. After
+    recording, press <b>Right &rarr; baseline</b> and change the next setting.</p>
+    <p class="hint"><b>Bits</b> shows what actually moved, which can be narrower
+    than the field. Changing a value from 0 to 3 in a three-bit field only moves
+    two bits. Record the same setting at two or three different values and the
+    full width becomes obvious.</p>
+  </section>
+
+  <section class="block">
+    <h2>Log</h2>
+    <p class="note" id="unsaved" style="display:none">Observations live in this page only.
+    Export before you close the tab.</p>
+    <ul class="log" id="logList"></ul>
+    <p class="hint" id="logEmpty">Nothing recorded yet.</p>
+  </section>
+</main>
+
+<footer class="status" id="status">Drop your original backup on the left and a changed file on the right.</footer>
+
+<input type="file" class="file" id="fileA" accept=".icf,.img,.bin,.dat">
+<input type="file" class="file" id="fileB" accept=".icf,.img,.bin,.dat">
+
+<script>
+// Copyright 2026 Georgi Dobrishinov (LZ1WOW)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/*
+ * th2000-core.js - TYT TH-2000 protocol and codeplug codec.
+ *
+ * No DOM, no Web Serial: pure data in, data out, so it can be unit tested
+ * under node and reused anywhere. index.html supplies the UI and the
+ * transport; this file supplies the knowledge.
+ *
+ * Derived by static analysis of the OEM CPS. See the accompanying report.
+ */
+(function (root) {
+  'use strict';
+
+  // ---------------------------------------------------------------- layout
+
+  const MEM_SIZE = 0x2B80;      // 11136 - ConMaxReadAdrr
+  const BLOCK_SIZE = 512;       // ConOneTmReadCt
+  const CHAN_NUM = 200;         // ConTotalRow + 1
+  const CHAN_REC = 21;          // ConOneChDatCt
+  const NAME_LEN = 10;          // ConOneChNameDatCt
+
+  const ADDR_CHANNELS = 0x0000;
+  const ADDR_CH_NAMES = 0x1140;
+  const ADDR_CH_AVAIL = 0x1F00; // bit set = in use
+  const ADDR_CH_SKIP = 0x1F20;  // bit set = ALLOW in scan (so skip = !bit)
+  const ADDR_BANDS = 0x1F40;
+  const ADDR_POWERON = 0x1F70;
+  const ADDR_SETTINGS = 0x2020;   // 32 bytes of radio-wide settings
+
+  const TONE_OFF = 0x0FFF;
+  const ICF_ROW = 32;           // ConOneRowDatCt
+
+  const POWER = ['High', 'Mid', 'Low'];
+  const BANDWIDTH = ['Wide', 'Mid', 'Narrow'];
+  const BUSY_LOCK = ['Off', 'Sub', 'Carrier'];
+  const SIGNALLING = ['Off', 'DTMF', '2TONE', '5TONE'];
+  const SQL_MODE = ['SQ', 'CT', 'Tone', 'CT/Tone', 'CTC&Tone'];
+  const PTT_ID = ['Off', 'Begin', 'End', 'Both'];
+  const SCRAMBLER = ['Off', '1', '2', '3', '4', '5', '6', '7', '8'];
+  const STEPS_KHZ = [2.5, 5, 6.25, 10, 12.5, 25, 50, 100];
+
+  // ----------------------------------------------------------------- tones
+  // 12-bit field. CTCSS is hz*10 (625..2541); DCS is the octal code as a
+  // plain integer (19..492). The ranges do not overlap, so the value alone
+  // says which it is. 0x0FFF means off.
+
+  /* 0x0FFF is the documented "no tone" sentinel, but a zeroed slot means the
+     same thing in practice: there is no DCS code 000, so a zero cannot be a
+     real tone. Treating it as off keeps label -> parse -> label stable. */
+  const isOff = (w) => { const v = w & 0x0FFF; return v === TONE_OFF || v === 0; };
+  const isDcs = (w) => { const v = w & 0x0FFF; return v > 0 && v < 0x200; };
+
+  function toneLabel(word, inverted) {
+    const v = word & 0x0FFF;
+    if (isOff(v)) return 'off';
+    if (isDcs(v)) return 'D' + v.toString(8).padStart(3, '0') + (inverted ? 'I' : 'N');
+    return (v / 10).toFixed(1);
+  }
+
+  /* Accepts "off", "88.5", "D023", "D023I", "023I". Returns {word, inverted}
+     or null if it cannot be read. */
+  function parseTone(text) {
+    const s = String(text).trim();
+    if (s === '' || /^off$/i.test(s)) return { word: TONE_OFF, inverted: false };
+    const dcs = s.match(/^d?([0-7]{1,3})\s*([ni])?$/i);
+    if (dcs) {
+      const code = parseInt(dcs[1], 8);
+      if (code < 1 || code > 0x1FF) return null;
+      return { word: code, inverted: /i/i.test(dcs[2] || '') };
+    }
+    const ctcss = s.match(/^(\d{2,3}(?:\.\d)?)$/);
+    if (ctcss) {
+      const word = Math.round(parseFloat(ctcss[1]) * 10);
+      if (word < 300 || word > 0x0FFE) return null;
+      return { word: word, inverted: false };
+    }
+    return null;
+  }
+
+
+  // The radio's own tables: 51 CTCSS tones and the 104 standard DCS codes.
+  const CTCSS_TONES = [62.5, 67.0, 69.3, 71.9, 74.4, 77.0, 79.7, 82.5, 85.4,
+    88.5, 91.5, 94.8, 97.4, 100.0, 103.5, 107.2, 110.9, 114.8, 118.8, 123.0,
+    127.3, 131.8, 136.5, 141.3, 146.2, 151.4, 156.7, 159.8, 162.2, 165.5,
+    169.9, 171.3, 173.8, 177.3, 179.9, 183.5, 186.2, 189.9, 192.8, 196.6,
+    199.5, 203.5, 206.5, 210.7, 218.1, 225.7, 229.1, 233.6, 241.8, 250.3,
+    254.1];
+  const DCS_CODES = [23, 25, 26, 31, 32, 36, 43, 47, 51, 53, 54, 65, 71, 72,
+    73, 74, 114, 115, 116, 122, 125, 131, 132, 134, 143, 145, 152, 155, 156,
+    162, 165, 172, 174, 205, 212, 223, 225, 226, 243, 244, 245, 246, 251, 252,
+    255, 261, 263, 265, 266, 271, 274, 306, 311, 315, 325, 331, 332, 343, 346,
+    351, 356, 364, 365, 371, 411, 412, 413, 423, 431, 432, 445, 446, 452, 454,
+    455, 462, 464, 465, 466, 503, 506, 516, 523, 526, 532, 546, 565, 606, 612,
+    624, 627, 631, 632, 654, 662, 664, 703, 712, 723, 731, 732, 734, 743, 754];
+
+  /* Every value the tone fields can hold, ready for a picker. */
+  function toneChoices() {
+    const out = [{ label: 'off', value: 'off', group: '' }];
+    for (const t of CTCSS_TONES) {
+      out.push({ label: t.toFixed(1), value: t.toFixed(1), group: 'CTCSS' });
+    }
+    for (const d of DCS_CODES) {
+      const c = String(d).padStart(3, '0');
+      out.push({ label: 'D' + c + 'N', value: 'D' + c, group: 'DCS normal' });
+    }
+    for (const d of DCS_CODES) {
+      const c = String(d).padStart(3, '0');
+      out.push({ label: 'D' + c + 'I', value: 'D' + c + 'I', group: 'DCS inverted' });
+    }
+    return out;
+  }
+
+  // --------------------------------------------------------------- framing
+
+  const HDR_TX = [0xFE, 0xFE, 0xEE, 0xEF];
+  const HDR_RX = [0xFE, 0xFE, 0xEF, 0xEE];
+  const END = 0xFD;
+  const MODEL_ID = [0x32, 0x30, 0x30, 0x30]; // "2000"
+
+  const OP = {
+    HANDSHAKE: 0xE0,
+    HANDSHAKE_ACK: 0xE1,
+    ENTER_READ: 0xE2,
+    ENTER_WRITE: 0xE3,
+    DATA: 0xE4,
+    END: 0xE5,
+    ACK: 0xE6,
+    READ_BLOCK: 0xEB
+  };
+
+  function checksumAdditive(bytes) {
+    let n = 0;
+    for (const b of bytes) n = (n + b) & 0xFF;
+    return n;
+  }
+
+  function checksumTwos(bytes) {
+    const n = checksumAdditive(bytes);
+    return n === 0 ? 0 : 256 - n;
+  }
+
+  /* Bias every byte by 0x80, then escape anything landing in 0xFA..0xFF so
+     no reserved byte can appear inside a frame. */
+  function stuff(bytes) {
+    const out = [];
+    for (const b of bytes) {
+      const v = (b + 0x80) & 0xFF;
+      if (v > 0xF9) out.push(0xFF, v & 0x0F);
+      else out.push(v);
+    }
+    return Uint8Array.from(out);
+  }
+
+  function unstuff(bytes) {
+    const out = [];
+    for (let i = 0; i < bytes.length;) {
+      let v;
+      if (bytes[i] === 0xFF) {
+        if (i + 1 >= bytes.length) throw new Error('Truncated escape sequence');
+        v = 0xF0 | (bytes[i + 1] & 0x0F);
+        i += 2;
+      } else {
+        v = bytes[i];
+        i += 1;
+      }
+      out.push((v + 0x80) & 0xFF);
+    }
+    return Uint8Array.from(out);
+  }
+
+  function buildFrame(opcode, payload, legacy) {
+    payload = payload || [];
+    const sum = legacy ? checksumTwos(payload) : checksumAdditive(payload);
+    const body = Uint8Array.from([...payload, sum]);
+    const mid = legacy ? body : stuff(body);
+    return Uint8Array.from([...HDR_TX, opcode, ...mid, END]);
+  }
+
+  function parseFrame(frame, legacy) {
+    if (frame.length < 6) throw new Error('Short frame from radio');
+    for (let i = 0; i < 4; i++) {
+      if (frame[i] !== HDR_RX[i]) {
+        throw new Error('Unexpected frame header ' + hex(frame.slice(0, 5)));
+      }
+    }
+    if (frame[frame.length - 1] !== END) throw new Error('Frame not terminated with FD');
+    const opcode = frame[4];
+    const mid = frame.slice(5, frame.length - 1);
+    const body = legacy ? mid : unstuff(mid);
+    const payload = body.slice(0, body.length - 1);
+    const got = body[body.length - 1];
+    const want = legacy ? checksumTwos(payload) : checksumAdditive(payload);
+    if (got !== want) {
+      throw new Error('Checksum mismatch: radio sent ' + hx(got) + ', expected ' + hx(want));
+    }
+    return { opcode, payload };
+  }
+
+  const hx = (b) => b.toString(16).toUpperCase().padStart(2, '0');
+  const hex = (bytes, limit) => {
+    const a = Array.from(bytes);
+    const shown = limit && a.length > limit ? a.slice(0, limit) : a;
+    let s = shown.map(hx).join(' ');
+    if (limit && a.length > limit) s += ' \u2026 +' + (a.length - limit) + ' bytes';
+    return s;
+  };
+
+  function be32(n) { return [(n >>> 24) & 0xFF, (n >>> 16) & 0xFF, (n >>> 8) & 0xFF, n & 0xFF]; }
+  function be16(n) { return [(n >>> 8) & 0xFF, n & 0xFF]; }
+
+  // -------------------------------------------------------------- codeplug
+
+  class Codeplug {
+    constructor(bytes) {
+      const buf = new Uint8Array(MEM_SIZE).fill(0xFF);
+      if (bytes) buf.set(bytes.subarray(0, Math.min(bytes.length, MEM_SIZE)));
+      this.data = buf;
+      this.view = new DataView(this.data.buffer);
+    }
+
+    clone() { return new Codeplug(this.data.slice()); }
+
+    // Class2.StringChUsefulPro: byte = base + i/8, mask = 1 << (i%8)
+    _bit(base, i) { return !!(this.data[base + (i >> 3)] & (1 << (i & 7))); }
+    _setBit(base, i, on) {
+      const off = base + (i >> 3), mask = 1 << (i & 7);
+      if (on) this.data[off] |= mask; else this.data[off] &= ~mask & 0xFF;
+    }
+
+    getChannel(i) {
+      const o = ADDR_CHANNELS + i * CHAN_REC;
+      const no = ADDR_CH_NAMES + i * NAME_LEN;
+      const rxw = this.view.getUint16(o + 8, true);
+      const txw = this.view.getUint16(o + 10, true);
+      const b12 = this.data[o + 12], b13 = this.data[o + 13], b14 = this.data[o + 14];
+      let name = '';
+      for (let k = 0; k < 6; k++) name += String.fromCharCode(this.data[o + 15 + k]);
+      for (let k = 0; k < NAME_LEN; k++) name += String.fromCharCode(this.data[no + k]);
+      return {
+        index: i,
+        used: this._bit(ADDR_CH_AVAIL, i),
+        skip: !this._bit(ADDR_CH_SKIP, i),   // inverted: bit set = allow
+        rxHz: this.view.getUint32(o + 0, true) * 10,
+        txHz: this.view.getUint32(o + 4, true) * 10,
+        rxTone: rxw & 0x0FFF,
+        txTone: txw & 0x0FFF,
+        scrambler: (rxw >> 12) & 0x0F,
+        toneFlag: !!(txw & 0x1000),
+        unknown13: !!(txw & 0x2000),   // meaning unknown - carried, not dropped
+        rxInv: !!(txw & 0x4000),
+        txInv: !!(txw & 0x8000),
+        boolA: !!(b12 & 0x01),
+        reverse: !!(b12 & 0x02),
+        busyLock: (b12 >> 2) & 3,
+        bandwidth: (b12 >> 4) & 3,
+        power: (b12 >> 6) & 3,
+        boolC: !!(b13 & 0x01),
+        talkAround: !!(b13 & 0x02),
+        signalling: (b13 >> 3) & 3,
+        sqlMode: (b13 >> 5) & 7,
+        step: b14 & 0x0F,
+        dtmfPttId: (b14 >> 4) & 3,
+        tone5PttId: (b14 >> 6) & 3,
+        name: name.replace(/[\s\u0000]+$/, '')
+      };
+    }
+
+    /* Writes the fields back to the record and updates both bitmaps. It never
+       blanks anything: an unused channel still has record bytes on a real
+       radio, and the bitmap alone decides what exists. Deleting is a separate,
+       explicit operation - see clearChannel. */
+    setChannel(c) {
+      const i = c.index;
+      const o = ADDR_CHANNELS + i * CHAN_REC;
+      const no = ADDR_CH_NAMES + i * NAME_LEN;
+
+      this.view.setUint32(o + 0, Math.round(c.rxHz / 10), true);
+      this.view.setUint32(o + 4, Math.round(c.txHz / 10), true);
+      this.view.setUint16(o + 8, (c.rxTone & 0x0FFF) | ((c.scrambler & 0x0F) << 12), true);
+      this.view.setUint16(o + 10, (c.txTone & 0x0FFF)
+        | (c.toneFlag ? 0x1000 : 0)
+        | (c.unknown13 ? 0x2000 : 0)
+        | (c.rxInv ? 0x4000 : 0)
+        | (c.txInv ? 0x8000 : 0), true);
+
+      const padded = (c.name || '').padEnd(16, ' ').slice(0, 16);
+      this.data[o + 12] = (c.boolA ? 1 : 0) | (c.reverse ? 2 : 0)
+        | ((c.busyLock & 3) << 2) | ((c.bandwidth & 3) << 4) | ((c.power & 3) << 6);
+      this.data[o + 13] = (c.boolC ? 1 : 0) | (c.talkAround ? 2 : 0)
+        | (padded.trim() ? 4 : 0)
+        | ((c.signalling & 3) << 3) | ((c.sqlMode & 7) << 5);
+      this.data[o + 14] = (c.step & 0x0F) | ((c.dtmfPttId & 3) << 4) | ((c.tone5PttId & 3) << 6);
+
+      for (let k = 0; k < 6; k++) this.data[o + 15 + k] = padded.charCodeAt(k) & 0xFF;
+      for (let k = 0; k < NAME_LEN; k++) this.data[no + k] = padded.charCodeAt(6 + k) & 0xFF;
+
+      this._setBit(ADDR_CH_AVAIL, i, c.used);
+      this._setBit(ADDR_CH_SKIP, i, !c.skip);
+    }
+
+    /* Delete a channel: blank the record and clear its in-use bit. */
+    clearChannel(i) {
+      const o = ADDR_CHANNELS + i * CHAN_REC;
+      const no = ADDR_CH_NAMES + i * NAME_LEN;
+      for (let k = 0; k < 15; k++) this.data[o + k] = 0xFF;
+      for (let k = 0; k < 6; k++) this.data[o + 15 + k] = 0x20;
+      for (let k = 0; k < NAME_LEN; k++) this.data[no + k] = 0x20;
+      this._setBit(ADDR_CH_AVAIL, i, false);
+      this._setBit(ADDR_CH_SKIP, i, true);
+    }
+
+    channels() {
+      const out = [];
+      for (let i = 0; i < CHAN_NUM; i++) out.push(this.getChannel(i));
+      return out;
+    }
+
+    bandLimits() {
+      const out = [];
+      for (let n = 0; n < 6; n++) {
+        const o = ADDR_BANDS + n * 8;
+        const lo = this.view.getUint32(o, true), hi = this.view.getUint32(o + 4, true);
+        // 0xFFFFFFFF marks an unused slot in OEM files; a zeroed or inverted
+        // pair is not a band either.
+        const unused = lo === 0xFFFFFFFF || hi <= lo;
+        out.push(unused ? null : { lo: lo * 10, hi: hi * 10 });
+      }
+      return out;
+    }
+
+    /* True if the frequency falls inside any populated band slot. Used only
+       to warn - the radio, not this tool, is the authority. A codeplug with
+       no band limits stored gives us nothing to check against, so say yes
+       rather than warning about everything. */
+    inBand(hz) {
+      const slots = this.bandLimits().filter(Boolean);
+      if (!slots.length) return true;
+      return slots.some((b) => hz >= b.lo && hz <= b.hi);
+    }
+
+    get powerOnName() { return this._str(ADDR_POWERON, 16); }
+    set powerOnName(s) { this._setStr(ADDR_POWERON, 16, s); }
+    get bandLabel() { return this._str(ADDR_POWERON + 16, 16); }
+
+    _str(o, n) {
+      let s = '';
+      for (let k = 0; k < n; k++) s += String.fromCharCode(this.data[o + k]);
+      return s.replace(/[\s\u0000]+$/, '');
+    }
+    _setStr(o, n, s) {
+      const p = String(s).padEnd(n, ' ').slice(0, n);
+      for (let k = 0; k < n; k++) this.data[o + k] = p.charCodeAt(k) & 0xFF;
+    }
+  }
+
+  /* The VFOs. Ten more 21-byte records sit between the channel array and the
+     name table, at 0x1068-0x1140 - a region the map had nothing to say about
+     until a radio was read with known VFO settings. Slots 204-209 are two VFOs
+     (the left and right display rows) with one slot per band. The middle slot
+     of each is a 220 MHz band this radio does not have; it is left alone.
+
+     They are not in the in-use bitmap, and they have no entry in the name
+     table, so neither is touched here. */
+  const VFO_SLOTS = [
+    { key: 'leftV',  slot: 204, label: 'VFO A (left) \u00B7 VHF',  band: 'vhf' },
+    { key: 'leftU',  slot: 206, label: 'VFO A (left) \u00B7 UHF',  band: 'uhf' },
+    { key: 'rightV', slot: 207, label: 'VFO B (right) \u00B7 VHF', band: 'vhf' },
+    { key: 'rightU', slot: 209, label: 'VFO B (right) \u00B7 UHF', band: 'uhf' }
+  ];
+
+  Codeplug.prototype.getVfo = function (key) {
+    const f = VFO_SLOTS.find((x) => x.key === key);
+    if (!f) throw new Error('unknown VFO: ' + key);
+    const c = this.getChannel(f.slot);
+    c.used = true;                 // a VFO always holds something
+    c.name = '';                   // no name table entry exists this far out
+    return c;
+  };
+
+  /* Only the 21-byte record may move. setChannel also sets an in-use bit and
+     writes a name, and at slot 204 the name would land past the end of the
+     name table. So: let it do its work, then put everything back except the
+     record itself. */
+  Codeplug.prototype.setVfo = function (key, ch) {
+    const f = VFO_SLOTS.find((x) => x.key === key);
+    if (!f) throw new Error('unknown VFO: ' + key);
+    const o = ADDR_CHANNELS + f.slot * CHAN_REC;
+    const before = this.data.slice();
+    this.setChannel(Object.assign({}, ch, { index: f.slot, name: '' }));
+    const record = this.data.slice(o, o + CHAN_REC);
+    this.data.set(before);
+    this.data.set(record, o);
+  };
+
+  /* A neutral view of a slot for editing. An unused slot still holds whatever
+     the factory left in it, and showing those leftovers makes an empty channel
+     look like a real one. Known fields are cleared; bits we do not understand
+     are carried through so claiming a slot does not silently rewrite them. */
+  function blankChannel(c) {
+    return Object.assign({}, c, {
+      used: false, rxHz: 0, txHz: 0, name: '',
+      rxTone: TONE_OFF, txTone: TONE_OFF, rxInv: false, txInv: false,
+      scrambler: 0, power: 0, bandwidth: 0, step: 0, busyLock: 0,
+      sqlMode: 0, signalling: 0, dtmfPttId: 0, tone5PttId: 0, skip: false
+    });
+  }
+
+  // ------------------------------------------------------------------- icf
+  // Line 1 COM port, line 2 comment, line 3 baud, then records of
+  // addr(4 hex) + length(2 hex) + length*2 hex digits. Shipped files mix
+  // CRLF and bare CR, so split on both.
+
+  function icfParse(text) {
+    const lines = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    if (lines.length < 4) throw new Error('This does not look like an .icf file: too few lines');
+    const header = { com: lines[0].trim(), comment: lines[1].trim(), baud: lines[2].trim() };
+    const mem = new Map();
+    let records = 0, highest = 0;
+    for (const raw of lines.slice(3)) {
+      const line = raw.trim();
+      if (line.length < 6) continue;
+      if (!/^[0-9A-Fa-f]+$/.test(line)) {
+        throw new Error('Unexpected characters in an .icf data line: ' + line.slice(0, 12));
+      }
+      const addr = parseInt(line.slice(0, 4), 16);
+      const n = parseInt(line.slice(4, 6), 16);
+      const hexData = line.slice(6, 6 + n * 2);
+      if (hexData.length < n * 2) throw new Error('Truncated .icf record at 0x' + line.slice(0, 4));
+      for (let k = 0; k < n; k++) {
+        mem.set(addr + k, parseInt(hexData.substr(k * 2, 2), 16));
+        if (addr + k > highest) highest = addr + k;
+      }
+      records++;
+    }
+    if (!records) throw new Error('No data records found in the .icf file');
+    const bytes = new Uint8Array(highest + 1);
+    for (const [a, b] of mem) bytes[a] = b;
+    return { header, bytes, records, coverage: highest + 1 };
+  }
+
+  function icfSerialize(bytes, header) {
+    const h = Object.assign({
+      com: 'COM1',
+      comment: '#Comment=TYT INC.(C)  2013  #MapRev=1',
+      baud: '38400'
+    }, header || {});
+    let data = bytes;
+    if (data.length % ICF_ROW) {
+      const padded = new Uint8Array(Math.ceil(data.length / ICF_ROW) * ICF_ROW);
+      padded.set(data);
+      data = padded;
+    }
+    const out = [h.com, h.comment, h.baud];
+    for (let addr = 0; addr < data.length; addr += ICF_ROW) {
+      const row = data.subarray(addr, addr + ICF_ROW);
+      out.push(addr.toString(16).toUpperCase().padStart(4, '0')
+        + row.length.toString(16).toUpperCase().padStart(2, '0')
+        + Array.from(row).map(hx).join(''));
+    }
+    return out.join('\r\n') + '\r\n';
+  }
+
+
+  // ------------------------------------------------------------------- fm
+  // 32 presets of 4 bytes at 0x2500, same 10 Hz little-endian encoding as the
+  // channels. The 4 bytes at 0x2580 look like one enable bit per preset, but
+  // that is inference from a factory image where every preset holds the same
+  // default - treat it as unconfirmed.
+
+  const FM_COUNT = 32;
+  const ADDR_FM_PRESETS = 0x2500;
+  const ADDR_FM_ENABLE = 0x2580;
+  const ADDR_FM_VFO = 0x2584;
+
+  Codeplug.prototype.fmPresets = function () {
+    const out = [];
+    for (let i = 0; i < FM_COUNT; i++) {
+      const raw = this.view.getUint32(ADDR_FM_PRESETS + i * 4, true);
+      out.push({
+        index: i,
+        hz: raw === 0xFFFFFFFF ? 0 : raw * 10,
+        enabled: !!(this.data[ADDR_FM_ENABLE + (i >> 3)] & (1 << (i & 7)))
+      });
+    }
+    return out;
+  };
+
+  Codeplug.prototype.setFmPreset = function (i, hz, enabled) {
+    this.view.setUint32(ADDR_FM_PRESETS + i * 4,
+      hz ? Math.round(hz / 10) : 0xFFFFFFFF, true);
+    const off = ADDR_FM_ENABLE + (i >> 3), mask = 1 << (i & 7);
+    if (enabled) this.data[off] |= mask; else this.data[off] &= ~mask & 0xFF;
+  };
+
+  Codeplug.prototype.fmVfo = function () {
+    const raw = this.view.getUint32(ADDR_FM_VFO, true);
+    return raw === 0xFFFFFFFF ? 0 : raw * 10;
+  };
+
+  Codeplug.prototype.setFmVfo = function (hz) {
+    this.view.setUint32(ADDR_FM_VFO, hz ? Math.round(hz / 10) : 0xFFFFFFFF, true);
+  };
+
+  // ------------------------------------------------------------------ csv
+
+  const CSV_COLUMNS = ['Channel', 'Name', 'RX MHz', 'TX MHz', 'Encode',
+    'Decode', 'Power', 'Bandwidth', 'Step kHz', 'Scan', 'Busy Lock',
+    'Squelch Mode', 'Signalling', 'Scrambler', 'DTMF PTT-ID', '5-Tone PTT-ID'];
+
+  // header -> field, tolerant of spelling so a spreadsheet round trip and a
+  // hand-written file both work
+  const CSV_ALIASES = {
+    channel: 'channel', ch: 'channel', location: 'channel', number: 'channel',
+    no: 'channel', index: 'channel',
+    name: 'name', label: 'name', alias: 'name',
+    rxmhz: 'rx', rx: 'rx', rxfreq: 'rx', rxfrequency: 'rx', receive: 'rx',
+    frequency: 'rx', freq: 'rx',
+    txmhz: 'tx', tx: 'tx', txfreq: 'tx', txfrequency: 'tx', transmit: 'tx',
+    encode: 'encode', txtone: 'encode', tone: 'encode',
+    decode: 'decode', rxtone: 'decode', ctone: 'decode',
+    power: 'power', pwr: 'power', txpower: 'power',
+    bandwidth: 'bandwidth', bw: 'bandwidth', width: 'bandwidth',
+    mode: 'bandwidth',
+    stepkhz: 'step', step: 'step', tstep: 'step',
+    scan: 'scan', skip: 'scan',
+    busylock: 'busyLock', block: 'busyLock',
+    squelchmode: 'sqlMode', sqlmode: 'sqlMode', squelch: 'sqlMode',
+    signalling: 'signalling', signaling: 'signalling', signal: 'signalling',
+    optsig: 'signalling',
+    scrambler: 'scrambler', scramble: 'scrambler',
+    dtmfpttid: 'dtmfPttId', dtmfptt: 'dtmfPttId',
+    '5tonepttid': 'tone5PttId', tonepttid: 'tone5PttId', tone5pttid: 'tone5PttId'
+  };
+
+  const norm = (h) => String(h).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  function csvSplitLine(line) {
+    const out = [];
+    let cur = '', q = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (q) {
+        if (c === '"') {
+          if (line[i + 1] === '"') { cur += '"'; i++; } else q = false;
+        } else cur += c;
+      } else if (c === '"') q = true;
+      else if (c === ',') { out.push(cur); cur = ''; }
+      else cur += c;
+    }
+    out.push(cur);
+    return out.map((x) => x.trim());
+  }
+
+  const csvQuote = (v) => {
+    const s = String(v === undefined || v === null ? '' : v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  function csvSerialize(cp, onlyUsed) {
+    const rows = [CSV_COLUMNS.join(',')];
+    for (const c of cp.channels()) {
+      if (onlyUsed !== false && !c.used) continue;
+      rows.push([
+        c.index + 1,
+        c.name,
+        (c.rxHz / 1e6).toFixed(5),
+        isRxOnly(c) ? 'off' : mhzText(c.txHz),
+        toneLabel(c.txTone, c.txInv),
+        toneLabel(c.rxTone, c.rxInv),
+        POWER[c.power] || c.power,
+        BANDWIDTH[c.bandwidth] || c.bandwidth,
+        STEPS_KHZ[c.step] !== undefined ? STEPS_KHZ[c.step] : c.step,
+        c.skip ? 'Skip' : 'Include',
+        BUSY_LOCK[c.busyLock] || c.busyLock,
+        SQL_MODE[c.sqlMode] || c.sqlMode,
+        SIGNALLING[c.signalling] || c.signalling,
+        SCRAMBLER[c.scrambler] || c.scrambler,
+        PTT_ID[c.dtmfPttId] || c.dtmfPttId,
+        PTT_ID[c.tone5PttId] || c.tone5PttId
+      ].map(csvQuote).join(','));
+    }
+    return rows.join('\r\n') + '\r\n';
+  }
+
+  /* Wording other tools use for the same thing. CHIRP writes Mode as FM or
+     NFM, and Skip as S or P, because those are its cross-radio spellings. */
+  const CSV_VALUE_ALIASES = {
+    bandwidth: { fm: 'Wide', nfm: 'Narrow', fmn: 'Narrow', n: 'Narrow', w: 'Wide' },
+    scan: { s: 'Skip', p: 'Skip', y: 'Skip', n: 'Include', no: 'Include' }
+  };
+
+  function pickEnum(list, raw, fallback, aliasFor) {
+    if (raw === '' || raw === undefined) return { value: fallback };
+    let n = norm(raw);
+    const alias = aliasFor && CSV_VALUE_ALIASES[aliasFor];
+    if (alias && alias[n] !== undefined) n = norm(alias[n]);
+    const i = list.findIndex((o) => norm(o) === n);
+    if (i >= 0) return { value: i };
+    if (/^\d+$/.test(raw)) {
+      const v = parseInt(raw, 10);
+      if (v >= 0 && v < list.length) return { value: v };
+    }
+    /* CHIRP's CSV export writes power as a wattage - "25W" - because it
+       converts through its own generic levels. Accept that by taking the
+       nearest level this radio actually has. */
+    if (list === POWER) {
+      const w = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+      if (isFinite(w) && w > 0) {
+        const watts = [25, 10, 5];
+        let best = 0, gap = Infinity;
+        watts.forEach((x, i) => {
+          const g = Math.abs(x - w);
+          if (g < gap) { gap = g; best = i; }
+        });
+        return { value: best };
+      }
+    }
+    return { error: 'expected one of ' + list.join(', ')
+      + (list === POWER ? ', or a wattage such as 25W' : '') };
+  }
+
+  /* Returns {channels, errors, warnings}. Nothing is applied if errors is
+     non-empty - a half-imported channel list is worse than none. */
+  function csvParse(text) {
+    const clean = String(text).replace(/^\uFEFF/, '')
+      .replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const lines = clean.split('\n').filter((l) => l.trim() !== '');
+    const errors = [], warnings = [], channels = [];
+    if (!lines.length) return { channels, errors: [{ line: 0, message: 'the file is empty' }], warnings };
+
+    const header = csvSplitLine(lines[0]).map(norm);
+    const map = header.map((h) => CSV_ALIASES[h] || null);
+    if (map.indexOf('rx') < 0) {
+      return {
+        channels, warnings,
+        errors: [{ line: 1, message: 'no receive-frequency column found. Expected a header like "RX MHz"; saw: ' + csvSplitLine(lines[0]).join(', ') }]
+      };
+    }
+    header.forEach((h, i) => {
+      if (!map[i] && h) warnings.push({ line: 1, message: 'ignoring unknown column "' + csvSplitLine(lines[0])[i] + '"' });
+    });
+
+    const seen = new Set();
+    let auto = 0;
+    for (let li = 1; li < lines.length; li++) {
+      const cells = csvSplitLine(lines[li]);
+      const get = (field) => {
+        const i = map.indexOf(field);
+        return i >= 0 && i < cells.length ? cells[i] : '';
+      };
+      const err = (m) => errors.push({ line: li + 1, message: m });
+
+      let idx;
+      const chRaw = get('channel');
+      if (chRaw) {
+        const n = parseInt(chRaw, 10);
+        if (!(n >= 1 && n <= CHAN_NUM)) { err('channel "' + chRaw + '" is outside 1-' + CHAN_NUM); continue; }
+        idx = n - 1;
+      } else {
+        while (seen.has(auto) && auto < CHAN_NUM) auto++;
+        idx = auto;
+      }
+      if (idx >= CHAN_NUM) { err('more rows than the radio has channels'); continue; }
+      if (seen.has(idx)) { err('channel ' + (idx + 1) + ' appears more than once'); continue; }
+      seen.add(idx);
+
+      const rxRaw = get('rx');
+      const rx = Math.round(parseFloat(rxRaw) * 1e6);
+      if (!rxRaw || !isFinite(rx) || rx <= 0) { err('receive frequency "' + rxRaw + '" is not a number of MHz'); continue; }
+
+      const txRaw = get('tx');
+      let tx;
+      if (/^off$/i.test(txRaw)) tx = 0xFFFFFFFF * 10;
+      else if (!txRaw) tx = rx;
+      else {
+        tx = Math.round(parseFloat(txRaw) * 1e6);
+        if (!isFinite(tx) || tx <= 0) { err('transmit frequency "' + txRaw + '" is not a number of MHz'); continue; }
+      }
+
+      const enc = get('encode') ? parseTone(get('encode')) : { word: TONE_OFF, inverted: false };
+      if (!enc) { err('encode "' + get('encode') + '" is not off, a CTCSS tone or a DCS code'); continue; }
+      const dec = get('decode') ? parseTone(get('decode')) : { word: TONE_OFF, inverted: false };
+      if (!dec) { err('decode "' + get('decode') + '" is not off, a CTCSS tone or a DCS code'); continue; }
+
+      const enums = {
+        power: pickEnum(POWER, get('power'), 0),
+        bandwidth: pickEnum(BANDWIDTH, get('bandwidth'), 0, 'bandwidth'),
+        busyLock: pickEnum(BUSY_LOCK, get('busyLock'), 0),
+        sqlMode: pickEnum(SQL_MODE, get('sqlMode'), 0),
+        signalling: pickEnum(SIGNALLING, get('signalling'), 0),
+        scrambler: pickEnum(SCRAMBLER, get('scrambler'), 0),
+        dtmfPttId: pickEnum(PTT_ID, get('dtmfPttId'), 0),
+        tone5PttId: pickEnum(PTT_ID, get('tone5PttId'), 0)
+      };
+      let bad = false;
+      for (const k of Object.keys(enums)) {
+        if (enums[k].error) { err(k + ': ' + enums[k].error); bad = true; }
+      }
+      if (bad) continue;
+
+      let step = 0;
+      const stepRaw = get('step');
+      if (stepRaw) {
+        const i = STEPS_KHZ.findIndex((v) => Math.abs(v - parseFloat(stepRaw)) < 1e-9);
+        if (i < 0) { err('step "' + stepRaw + '" is not one of ' + STEPS_KHZ.join(', ') + ' kHz'); continue; }
+        step = i;
+      }
+
+      // CHIRP writes S for skip and P for priority-skip; blank means include
+      const scanRaw = norm(get('scan'));
+      const skip = ['skip', 'yes', '1', 'true', 's', 'p', 'y']
+        .indexOf(scanRaw) >= 0;
+
+      channels.push({
+        index: idx, used: true, name: get('name'),
+        rxHz: rx, txHz: tx,
+        txTone: enc.word, txInv: enc.inverted,
+        rxTone: dec.word, rxInv: dec.inverted,
+        toneFlag: false, unknown13: false,
+        boolA: false, reverse: false, boolC: false, talkAround: false,
+        step: step, skip: skip,
+        power: enums.power.value, bandwidth: enums.bandwidth.value,
+        busyLock: enums.busyLock.value, sqlMode: enums.sqlMode.value,
+        signalling: enums.signalling.value, scrambler: enums.scrambler.value,
+        dtmfPttId: enums.dtmfPttId.value, tone5PttId: enums.tone5PttId.value
+      });
+    }
+    return { channels, errors, warnings };
+  }
+
+  /* A transmit frequency of all ones means "do not transmit". Zero means
+     nothing has been set yet. Neither transmits, and the test was written out
+     by hand in five places before this existed - one of which forgot it and
+     printed 42949.67295 MHz. */
+  const RX_ONLY_HZ = 0xFFFFFFFF * 10;
+  const isRxOnly = (c) => c.txHz === RX_ONLY_HZ || c.txHz === 0;
+  const mhzText = (hz) => (hz / 1e6).toFixed(5);
+
+  // ----------------------------------------------------------------- diff
+
+  const REGIONS = [
+    [0x0000, 0x1068, 'channel records'],
+    [0x1068, 0x1140, 'VFO records'],
+    [0x1140, 0x1910, 'channel names'],
+    [0x1910, 0x1F00, 'unmapped after names'],
+    [0x1F00, 0x1F20, 'in-use bitmap'],
+    [0x1F20, 0x1F40, 'scan-skip bitmap'],
+    [0x1F40, 0x1F70, 'band limits'],
+    [0x1F70, 0x1F90, 'power-on name / band label'],
+    [0x1F90, 0x2020, 'frequency-code region'],
+    [0x2020, 0x2040, 'global settings'],
+    [0x2040, 0x2160, 'DTMF'],
+    [0x2160, 0x2260, '2-tone'],
+    [0x2260, 0x2500, '5-tone'],
+    [0x2500, 0x2600, 'FM broadcast'],
+    [0x2600, 0x2B80, 'unmapped tail']
+  ];
+
+  const FIELD_LABELS = {
+    rxHz: 'Receive', txHz: 'Transmit', name: 'Name', txTone: 'Encode',
+    rxTone: 'Decode', txInv: 'Encode inverted', rxInv: 'Decode inverted',
+    power: 'Power', bandwidth: 'Bandwidth', step: 'Step', skip: 'Scan',
+    busyLock: 'Busy lock', sqlMode: 'Squelch mode', signalling: 'Signalling',
+    scrambler: 'Scrambler', dtmfPttId: 'DTMF PTT-ID',
+    tone5PttId: '5-tone PTT-ID', toneFlag: 'Tone flag',
+    unknown13: 'Unknown bit 13', boolA: 'Unknown A', reverse: 'Reverse',
+    boolC: 'Unknown C', talkAround: 'Talk around'
+  };
+
+  function fieldText(key, v) {
+    if (key === 'rxHz' || key === 'txHz') {
+      if (v === RX_ONLY_HZ) return 'off';
+      if (v === 0) return 'not set';
+      return mhzText(v) + ' MHz';
+    }
+    if (key === 'txTone' || key === 'rxTone') return toneLabel(v, false);
+    if (key === 'power') return POWER[v] || v;
+    if (key === 'bandwidth') return BANDWIDTH[v] || v;
+    if (key === 'step') return (STEPS_KHZ[v] !== undefined ? STEPS_KHZ[v] + ' kHz' : v);
+    if (key === 'skip') return v ? 'skip' : 'include';
+    if (key === 'busyLock') return BUSY_LOCK[v] || v;
+    if (key === 'sqlMode') return SQL_MODE[v] || v;
+    if (key === 'signalling') return SIGNALLING[v] || v;
+    if (key === 'scrambler') return SCRAMBLER[v] || v;
+    if (key === 'dtmfPttId' || key === 'tone5PttId') return PTT_ID[v] || v;
+    if (typeof v === 'boolean') return v ? 'yes' : 'no';
+    return String(v);
+  }
+
+  /* Human-readable value of a settings field. */
+  function settingText(f, v) {
+    if (f.kind === 'num') return String(v);
+    return f.list[v] !== undefined ? f.list[v] : 'value ' + v;
+  }
+
+  /* Decoded differences in the radio-wide settings, so a comparison says
+     "Backlight 7 -> 3" rather than leaving you to read the bits. */
+  function diffSettings(a, b) {
+    const out = [];
+    for (const f of SETTINGS_FIELDS) {
+      const va = a.getSetting(f.key), vb = b.getSetting(f.key);
+      if (va !== vb) {
+        out.push({ key: f.key, label: f.label,
+          from: settingText(f, va), to: settingText(f, vb) });
+      }
+    }
+    if (a.getPassword() !== b.getPassword()) {
+      out.push({ key: 'password', label: 'Boot-strap password',
+        from: a.getPassword(), to: b.getPassword() });
+    }
+    for (const n of [1, 2]) {
+      if (a.introLine(n) !== b.introLine(n)) {
+        out.push({ key: 'intro' + n, label: 'Intro line ' + n,
+          from: JSON.stringify(a.introLine(n)), to: JSON.stringify(b.introLine(n)) });
+      }
+    }
+    const ba = a.bandLimits(), bb = b.bandLimits();
+    for (let i = 0; i < ba.length; i++) {
+      const fa = ba[i], fb = bb[i];
+      const txt = (x) => x ? (x.lo / 1e6).toFixed(4) + '-' + (x.hi / 1e6).toFixed(4) + ' MHz' : 'unused';
+      if (txt(fa) !== txt(fb)) {
+        out.push({ key: 'band' + i, label: 'Band slot ' + i, from: txt(fa), to: txt(fb) });
+      }
+    }
+    return out;
+  }
+
+  /* Decoded differences in the VFOs, in the same terms the VFO tab uses. */
+  function diffVfo(a, b) {
+    const out = [];
+    for (const f of VFO_SLOTS) {
+      const ca = a.getVfo(f.key), cb = b.getVfo(f.key);
+      for (const key of ['rxHz', 'txHz', 'txTone', 'rxTone', 'txInv', 'rxInv',
+                         'power', 'bandwidth', 'step', 'signalling', 'busyLock',
+                         'scrambler', 'dtmfPttId', 'reverse', 'talkAround']) {
+        if (ca[key] === cb[key]) continue;
+        out.push({ key: f.key + '.' + key,
+          label: f.label + ' \u00B7 ' + (FIELD_LABELS[key] || key),
+          from: fieldText(key, ca[key]), to: fieldText(key, cb[key]) });
+      }
+    }
+    return out;
+  }
+
+  /* Decoded differences in the FM broadcast block. */
+  function diffFm(a, b) {
+    const out = [];
+    const pa = a.fmPresets(), pb = b.fmPresets();
+    const mhz = (hz) => hz ? (hz / 1e6).toFixed(2) + ' MHz' : 'empty';
+    for (let i = 0; i < pa.length; i++) {
+      if (pa[i].hz !== pb[i].hz || pa[i].enabled !== pb[i].enabled) {
+        const tag = (p) => mhz(p.hz) + (p.enabled ? '' : ', off');
+        out.push({ key: 'fm' + i, label: 'FM preset ' + (i + 1),
+          from: tag(pa[i]), to: tag(pb[i]) });
+      }
+    }
+    if (a.fmVfo() !== b.fmVfo()) {
+      out.push({ key: 'fmVfo', label: 'FM VFO', from: mhz(a.fmVfo()), to: mhz(b.fmVfo()) });
+    }
+    return out;
+  }
+
+  /* Compare two codeplugs. `a` is the baseline (what the radio holds),
+     `b` is the proposed image. */
+  function diffCodeplugs(a, b) {
+    const bytes = [];
+    for (let i = 0; i < MEM_SIZE; i++) if (a.data[i] !== b.data[i]) bytes.push(i);
+
+    const regions = REGIONS.map(([lo, hi, name]) => {
+      const hits = bytes.filter((i) => i >= lo && i < hi);
+      return { lo, hi, name, count: hits.length };
+    }).filter((r) => r.count);
+
+    const channels = [];
+    for (let i = 0; i < CHAN_NUM; i++) {
+      const ca = a.getChannel(i), cb = b.getChannel(i);
+      if (!ca.used && !cb.used) continue;
+      if (ca.used && !cb.used) { channels.push({ index: i, kind: 'removed', from: ca, fields: [] }); continue; }
+      if (!ca.used && cb.used) { channels.push({ index: i, kind: 'added', to: cb, fields: [] }); continue; }
+      const fields = [];
+      for (const k of Object.keys(FIELD_LABELS)) {
+        if (ca[k] !== cb[k]) {
+          fields.push({ key: k, label: FIELD_LABELS[k], from: fieldText(k, ca[k]), to: fieldText(k, cb[k]) });
+        }
+      }
+      if (fields.length) channels.push({ index: i, kind: 'changed', from: ca, to: cb, fields });
+    }
+
+    // Slots that are unused on both sides but whose record bytes moved. These
+    // change nothing the radio acts on, but they are real bytes and without
+    // counting them the summary cannot account for its own total.
+    let emptySlots = 0;
+    for (let i = 0; i < CHAN_NUM; i++) {
+      if (a._bit(ADDR_CH_AVAIL, i) || b._bit(ADDR_CH_AVAIL, i)) continue;
+      const o = i * CHAN_REC, no = ADDR_CH_NAMES + i * NAME_LEN;
+      let moved = false;
+      for (let k = 0; k < CHAN_REC && !moved; k++) if (a.data[o + k] !== b.data[o + k]) moved = true;
+      for (let k = 0; k < NAME_LEN && !moved; k++) if (a.data[no + k] !== b.data[no + k]) moved = true;
+      if (moved) emptySlots++;
+    }
+
+    const other = regions.filter((r) => r.lo >= 0x1F40 && r.name !== 'in-use bitmap');
+    return { bytes: bytes.length, byteList: bytes, regions, channels, other, emptySlots,
+      settings: diffSettings(a, b), fm: diffFm(a, b), vfo: diffVfo(a, b) };
+  }
+
+  /* Which named region an address falls in. */
+  function regionOf(addr) {
+    for (const [lo, hi, name] of REGIONS) if (addr >= lo && addr < hi) return name;
+    return 'outside the codeplug';
+  }
+
+  const bin8 = (v) => v.toString(2).padStart(8, '0').replace(/(....)(....)/, '$1 $2');
+
+  /* Group consecutive bit indices: [5,6,7] -> "bits 5-7", [1] -> "bit 1". */
+  function bitRuns(bits) {
+    if (!bits.length) return '';
+    const runs = [];
+    let start = bits[0], prev = bits[0];
+    for (const b of bits.slice(1)) {
+      if (b === prev + 1) { prev = b; continue; }
+      runs.push([start, prev]); start = prev = b;
+    }
+    runs.push([start, prev]);
+    return runs.map(([a, b]) => a === b ? 'bit ' + a : 'bits ' + a + '-' + b).join(', ');
+  }
+
+  /* Byte-and-bit level differences. This is the tool for working out what an
+     unmapped byte does: change one setting in the manufacturer's software,
+     save, and compare - the exact bits that moved are the answer. */
+  function diffBits(a, b, opts) {
+    opts = opts || {};
+    const lo = opts.lo === undefined ? 0 : opts.lo;
+    const hi = opts.hi === undefined ? MEM_SIZE : opts.hi;
+    const out = [];
+    for (let i = lo; i < hi; i++) {
+      const x = a.data[i] ^ b.data[i];
+      if (!x) continue;
+      const region = regionOf(i);
+      if (opts.skipChannels && /channel|bitmap/.test(region)) continue;
+      const bits = [];
+      for (let k = 0; k < 8; k++) if (x & (1 << k)) bits.push(k);
+      out.push({
+        addr: i, region: region,
+        from: a.data[i], to: b.data[i],
+        bits: bits, bitText: bitRuns(bits),
+        // the value those bits hold, before and after, shifted down to zero
+        fieldFrom: (a.data[i] >> bits[0]) & ((1 << bits.length) - 1),
+        fieldTo: (b.data[i] >> bits[0]) & ((1 << bits.length) - 1)
+      });
+    }
+    return out;
+  }
+
+  /* Plain text, so it can be pasted straight into a note or a message. */
+  function formatBitDiff(entries) {
+    if (!entries.length) return 'no byte differences';
+    const head = 'addr    off  region                    before        after         bits';
+    const rule = '-'.repeat(head.length);
+    const rows = entries.map((e) => {
+      const off = e.addr >= ADDR_SETTINGS && e.addr < ADDR_SETTINGS + 32
+        ? '+' + (e.addr - ADDR_SETTINGS) : '';
+      return [
+        '0x' + e.addr.toString(16).toUpperCase().padStart(4, '0'),
+        off.padEnd(4),
+        e.region.slice(0, 24).padEnd(25),
+        (hx(e.from) + ' ' + bin8(e.from)).padEnd(13),
+        (hx(e.to) + ' ' + bin8(e.to)).padEnd(13),
+        e.bitText
+      ].join(' ');
+    });
+    return [head, rule].concat(rows).join('\n');
+  }
+
+  // ------------------------------------------------------- radio settings
+  // Every field below was confirmed by diffing real saves from the OEM
+  // software against a radio, not inferred from decompiled code. Bit
+  // positions and widths come from those bytes. Option labels come from the
+  // literal string tables in the CPS.
+  //
+  // Reading and writing is preserve-and-patch: only the bits of a named field
+  // are ever touched, so the eleven bytes nobody has mapped - and any bit we
+  // have not accounted for - pass through untouched. noop_roundtrip.py proves
+  // that byte for byte.
+
+  const KEY_FN = ['None', 'KEY-Low', 'KEY-Shift', 'KEY-MHZ', 'KEY-10MHZ',
+    'KEY-TONE', 'KEY-M/V', 'KEY-Save', 'KEY-A/B', 'KEY-Band', 'KEY-MONI',
+    '1750 TONE', 'Talk Around', 'Frequency Reverse'];
+  /* What each key function does. The labels above are the manufacturer's own,
+     lifted from the string table in their software; these explanations are the
+     standard meanings for this class of radio and are not individually
+     confirmed on a TH-2000. KEY-Save is the least certain - "Save" is used for
+     both battery saving and storing a frequency, and both are common. */
+  const KEY_FN_HELP = [
+    'Nothing. The key does not do anything.',
+    'Cycles transmit power: High, Mid, Low.',
+    'Cycles the repeater shift direction: none, minus, plus.',
+    'Tunes in 1 MHz steps instead of the channel step, for moving across a band quickly.',
+    'Tunes in 10 MHz steps.',
+    'Cycles the tone mode: off, CTCSS, DCS.',
+    'Switches between memory channels and tuning a frequency directly (VFO).',
+    'Power save. The manufacturer\u2019s label is ambiguous \u2014 it may instead store the current frequency to a channel. Worth pressing once to see.',
+    'Swaps which of the two display rows is active, when dual watch is on.',
+    'Switches band, between the 136-174 and 400-480 ranges.',
+    'Monitor: opens the squelch while held, so you can hear a weak signal or traffic without the matching tone.',
+    'Sends the 1750 Hz tone burst that opens many European repeaters.',
+    'Talk around: transmits on the receive frequency, bypassing the repeater to work a station direct.',
+    'Frequency reverse: swaps transmit and receive, so you can hear the repeater input and judge whether the other station is workable direct.'
+  ];
+
+  const SQL_LEVEL = ['OFF', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+  const TOT_LIST = ['OFF', '30 Second', '60 Second', '90 Second', '120 Second',
+    '150 Second', '180 Second', '210 Second', '240 Second', '270 Second'];
+  const LED_MODE = ['OFF', 'ON', '5S', '10S', '15S', '20S', '25S', '30S'];
+  const SCAN_TYPE = ['To', 'Co', 'Se'];
+  const POWER_OFF = ['OFF', '30 Minute', '1 Hour', '2 Hour'];
+  const RX_LIGHT = ['Always On', 'Code On', 'OFF'];
+  const KEY_MODE = ['ALL', 'PTT', 'KEY', 'KEY & Side Key'];
+  const KEY_LOCK = ['OFF', 'Auto'];
+  const DIS_MODE = ['Frequency', 'Channel', 'Name'];        // ShowName_EngCh
+  const INTRO_SCREEN = ['OFF', 'Voltage', 'Char String'];   // RadioKind_EngCh
+  const TX_CH_KIND = ['Main CH', 'Last CH'];                // PttTxKind_EngCh
+  const TX_TONE_KIND = ['OFF', 'END'];                      // PttKind_EngCh1
+  const OFF_ON = ['OFF', 'ON'];
+
+  /* off = byte offset from 0x2020. lo/hi = inclusive bit range.
+     kind: 'enum' picks from list; 'num' stores the number itself, plus
+     `bias` when the radio stores one less than it shows.
+     sure: false means the bit position is confirmed but the option ordering
+     has not been checked end to end. */
+  const SETTINGS_FIELDS = [
+    // --- radio behaviour
+    { key: 'sql',        label: 'Squelch level',  off: 12, lo: 0, hi: 3, kind: 'enum', list: SQL_LEVEL, group: 'radio' },
+    { key: 'volume',     label: 'Volume level',   off: 3,  lo: 0, hi: 4, kind: 'num', min: 0, max: 31, bias: 0, group: 'radio' },
+    { key: 'tot',        label: 'Time-out timer', off: 14, lo: 0, hi: 3, kind: 'enum', list: TOT_LIST, group: 'radio' },
+    { key: 'powerOff',   label: 'Auto power off', off: 14, lo: 5, hi: 6, kind: 'enum', list: POWER_OFF, group: 'radio' },
+    { key: 'scanType',   label: 'Scan type',      off: 16, lo: 6, hi: 7, kind: 'enum', list: SCAN_TYPE, group: 'radio' },
+    { key: 'dualWait',   label: 'Dual watch',     off: 20, lo: 4, hi: 4, kind: 'enum', list: OFF_ON, group: 'radio' },
+    { key: 'monitor',    label: 'Radio monitor',  off: 20, lo: 6, hi: 6, kind: 'enum', list: OFF_ON, group: 'radio' },
+    { key: 'sqlTail',    label: 'Eliminate squelch tail*', off: 18, lo: 6, hi: 6, kind: 'enum', list: OFF_ON, group: 'radio' },
+
+    // --- display and sound
+    { key: 'light',      label: 'Backlight',      off: 20, lo: 0, hi: 2, kind: 'num', min: 1, max: 7, bias: 1, group: 'display' },
+    { key: 'ledMode',    label: 'LED mode',       off: 16, lo: 0, hi: 2, kind: 'enum', list: LED_MODE, group: 'display' },
+    { key: 'rxLight',    label: 'RX light',       off: 2,  lo: 0, hi: 1, kind: 'enum', list: RX_LIGHT, group: 'display' },
+    { key: 'disMode',    label: 'Display mode',   off: 16, lo: 4, hi: 5, kind: 'enum', list: DIS_MODE, group: 'display' },
+    { key: 'beep',       label: 'Beep',           off: 13, lo: 7, hi: 7, kind: 'enum', list: OFF_ON, group: 'display' },
+    { key: 'introMode',  label: 'Intro screen',   off: 13, lo: 3, hi: 4, kind: 'enum', list: INTRO_SCREEN, group: 'display' },
+
+    // --- transmit
+    { key: 'txChSelect', label: 'TX channel',     off: 13, lo: 0, hi: 0, kind: 'enum', list: TX_CH_KIND, group: 'tx' },
+    { key: 'txTone',     label: 'TX tone',        off: 15, lo: 6, hi: 6, kind: 'enum', list: TX_TONE_KIND, group: 'tx' },
+
+    // --- keys
+    { key: 'keyMode',    label: 'Key mode',       off: 22, lo: 0, hi: 1, kind: 'enum', list: KEY_MODE, group: 'keys' },
+    { key: 'keyLock',    label: 'Key lock',       off: 20, lo: 5, hi: 5, kind: 'enum', list: KEY_LOCK, group: 'keys' },
+    { key: 'p1Short',    label: 'P1 short',  off: 0,  lo: 0, hi: 3, kind: 'enum', list: KEY_FN, group: 'keys' },
+    { key: 'p1Long',     label: 'P1 long',   off: 1,  lo: 0, hi: 3, kind: 'enum', list: KEY_FN, group: 'keys' },
+    { key: 'p2Short',    label: 'P2 short',  off: 0,  lo: 4, hi: 7, kind: 'enum', list: KEY_FN, group: 'keys' },
+    { key: 'p2Long',     label: 'P2 long',   off: 1,  lo: 4, hi: 7, kind: 'enum', list: KEY_FN, group: 'keys' },
+    { key: 'p3Short',    label: 'P3 short',  off: 23, lo: 0, hi: 3, kind: 'enum', list: KEY_FN, group: 'keys' },
+    { key: 'p3Long',     label: 'P3 long',   off: 23, lo: 4, hi: 7, kind: 'enum', list: KEY_FN, group: 'keys' },
+    { key: 'p4Short',    label: 'P4 short',  off: 24, lo: 0, hi: 3, kind: 'enum', list: KEY_FN, group: 'keys' },
+    { key: 'p4Long',     label: 'P4 long',   off: 24, lo: 4, hi: 7, kind: 'enum', list: KEY_FN, group: 'keys' },
+    { key: 'p5Short',    label: 'P5 short',  off: 25, lo: 0, hi: 3, kind: 'enum', list: KEY_FN, group: 'keys' },
+    { key: 'p5Long',     label: 'P5 long',   off: 25, lo: 4, hi: 7, kind: 'enum', list: KEY_FN, group: 'keys',
+      readOnly: true, fixedText: 'Power Button' },
+
+    // --- security
+    { key: 'pwdEnable',  label: 'Boot-strap password', off: 18, lo: 7, hi: 7, kind: 'enum', list: OFF_ON, group: 'security' }
+  ];
+
+
+  const SETTINGS_HELP = {
+    "sql": "How strong a signal has to be before the speaker unmutes. OFF leaves the squelch open all the time; 9 is the tightest.",
+    "volume": "Volume level held in the codeplug, 0 to 31.",
+    "tot": "Time-out timer: the longest a single transmission may last before the radio stops transmitting. OFF removes the limit.",
+    "powerOff": "Switches the radio off by itself after this long. OFF disables it.",
+    "scanType": "How a scan behaves when it finds a busy channel.\n\nTo (time operated) - pauses, then carries on after a fixed time whether or not the signal is still there.\nCo (carrier operated) - stays put while the carrier is present and resumes once it drops.\nSe (search) - stops on the busy channel and stays there.\n\nThese are the usual meanings for this class of radio; check your manual if the behaviour matters to you.",
+    "dualWait": "Watches a second channel while resting on the current one.",
+    "monitor": "Opens the squelch on demand so weak or sub-audio-coded signals can be heard. OEM label 'Radio Monitor'.",
+    "sqlTail": "Full OEM label: 'Eliminate Squelch Tail When No CTC/DCS Signaling'. Suppresses the burst of noise at the end of a transmission when neither CTCSS nor DCS is in use.",
+    "light": "Display brightness, 1 (dimmest) to 7 (brightest). The radio stores one less than the number shown.",
+    "ledMode": "How long the backlight stays lit. OFF never lights it, ON leaves it on, and the timed settings switch it off after that many seconds.",
+    "rxLight": "Whether the display lights up on receive. Always On lights for any signal; Code On lights only when a matching CTCSS or DCS code opens the squelch; OFF never lights.",
+    "disMode": "What the radio shows for each channel: the frequency, the channel number, or the channel name.",
+    "beep": "Confirmation tone on key presses.",
+    "introMode": "What appears on the display at power-on. Char String shows two lines of your own text, which appear below once selected.",
+    "txChSelect": "Which channel is used if you transmit while scanning or watching two channels. Main CH is the one you started from; Last CH is the one it last heard traffic on.",
+    "txTone": "Whether an identification tone is sent at the end of a transmission. OEM label 'TX Tone', options OFF and END.",
+    "keyMode": "Which controls the key lock covers: everything, PTT only, the keypad only, or the keypad together with the side keys.",
+    "keyLock": "Auto locks the keypad by itself after a period without input.",
+    "pwdEnable": "Turns on the six-digit code stored below. OEM label 'Use Boot-Strap Password'.",
+    "p1Short": "Function assigned to a short press of the P1 button.",
+    "p1Long": "Function assigned to a long press of the P1 button.",
+    "p2Short": "Function assigned to a short press of the P2 button.",
+    "p2Long": "Function assigned to a long press of the P2 button.",
+    "p3Short": "Function assigned to a short press of the P3 button.",
+    "p3Long": "Function assigned to a long press of the P3 button.",
+    "p4Short": "Function assigned to a short press of the P4 button.",
+    "p4Long": "Function assigned to a long press of the P4 button.",
+    "p5Short": "Function assigned to a short press of the P5 button.",
+    "p5Long": "Power Button. Fixed by the radio: this key switches it on and off, and the manufacturer's software does not allow it to be reassigned."
+  };
+
+  const SETTINGS_GROUPS = [
+    ['radio', 'Radio'], ['display', 'Display and sound'],
+    ['tx', 'Transmit'], ['keys', 'Keys'], ['security', 'Security']
+  ];
+
+  const PWD_OFF = 26, PWD_LEN = 6;      // six ASCII digits at +26..+31
+
+  Codeplug.prototype.getSetting = function (key) {
+    const f = SETTINGS_FIELDS.find((x) => x.key === key);
+    if (!f) throw new Error('unknown setting: ' + key);
+    const raw = (this.data[ADDR_SETTINGS + f.off] >> f.lo) & ((1 << (f.hi - f.lo + 1)) - 1);
+    return f.kind === 'num' ? raw + (f.bias || 0) : raw;
+  };
+
+  Codeplug.prototype.setSetting = function (key, value) {
+    const f = SETTINGS_FIELDS.find((x) => x.key === key);
+    if (!f) throw new Error('unknown setting: ' + key);
+    const width = f.hi - f.lo + 1, mask = ((1 << width) - 1) << f.lo;
+    let v = f.kind === 'num' ? Math.round(value) - (f.bias || 0) : Math.round(value);
+    if (v < 0 || v > (1 << width) - 1) {
+      throw new Error(f.label + ': ' + value + ' does not fit in ' + width + ' bit'
+        + (width === 1 ? '' : 's'));
+    }
+    const at = ADDR_SETTINGS + f.off;
+    this.data[at] = (this.data[at] & ~mask & 0xFF) | ((v << f.lo) & mask);
+  };
+
+  Codeplug.prototype.settings = function () {
+    const out = {};
+    for (const f of SETTINGS_FIELDS) out[f.key] = this.getSetting(f.key);
+    return out;
+  };
+
+  Codeplug.prototype.getPassword = function () {
+    let s = '';
+    for (let i = 0; i < PWD_LEN; i++) s += String.fromCharCode(this.data[ADDR_SETTINGS + PWD_OFF + i]);
+    return s.replace(/[^\x20-\x7E]/g, '').trim();
+  };
+
+  /* Digits only - the manufacturer's software will not accept anything else,
+     and the radio stores six ASCII characters. Short codes are padded with 0. */
+  Codeplug.prototype.setPassword = function (text) {
+    const p = String(text).replace(/[^0-9]/g, '').slice(0, PWD_LEN).padEnd(PWD_LEN, '0');
+    for (let i = 0; i < PWD_LEN; i++) this.data[ADDR_SETTINGS + PWD_OFF + i] = p.charCodeAt(i);
+    return p;
+  };
+
+  /* The power-on display is two lines of 16 characters. What an earlier
+     version of this code called "band label" is line 2 - confirmed by a save
+     that changed both blocks at once. */
+  Codeplug.prototype.introLine = function (n) {
+    return this._str(ADDR_POWERON + (n === 2 ? 16 : 0), 16);
+  };
+  Codeplug.prototype.setIntroLine = function (n, text) {
+    this._setStr(ADDR_POWERON + (n === 2 ? 16 : 0), 16, text);
+  };
+
+  // ----------------------------------------------------------- validation
+
+  function validate(cp) {
+    const issues = [];
+    const bands = cp.bandLimits().filter(Boolean);
+    const inBand = (hz) => !bands.length || bands.some((b) => hz >= b.lo && hz <= b.hi);
+    const seen = new Map();
+    for (const c of cp.channels()) {
+      if (!c.used) continue;
+      const at = 'channel ' + (c.index + 1);
+      if (!c.rxHz) { issues.push({ index: c.index, level: 'error', message: at + ' is in use but has no receive frequency' }); continue; }
+      if (!inBand(c.rxHz)) {
+        issues.push({ index: c.index, level: 'warning', message: at + ' receives on ' + (c.rxHz / 1e6).toFixed(5) + ' MHz, outside this codeplug\u2019s band limits' });
+      }
+      const rxOnly = isRxOnly(c);
+      if (!rxOnly && !inBand(c.txHz)) {
+        issues.push({ index: c.index, level: 'error', message: at + ' transmits on ' + (c.txHz / 1e6).toFixed(5) + ' MHz, outside this codeplug\u2019s band limits' });
+      }
+      const stepHz = STEPS_KHZ[c.step] * 1000;
+      if (stepHz && c.rxHz % stepHz !== 0) {
+        issues.push({ index: c.index, level: 'warning', message: at + ' receive frequency is not a multiple of its ' + STEPS_KHZ[c.step] + ' kHz step' });
+      }
+      const key = c.rxHz + '/' + c.txHz + '/' + c.rxTone + '/' + c.txTone;
+      if (seen.has(key)) {
+        issues.push({ index: c.index, level: 'warning', message: at + ' duplicates channel ' + (seen.get(key) + 1) });
+      } else seen.set(key, c.index);
+      if (/[^\x20-\x7E]/.test(c.name)) {
+        issues.push({ index: c.index, level: 'warning', message: at + ' has a name with characters the radio may not display' });
+      }
+    }
+    return issues;
+  }
+
+  // ------------------------------------------------------- bulk operations
+
+  function applyToRange(cp, from, to, patch) {
+    let n = 0;
+    for (let i = from; i <= to; i++) {
+      const c = cp.getChannel(i);
+      if (!c.used) continue;
+      Object.assign(c, patch);
+      cp.setChannel(c);
+      n++;
+    }
+    return n;
+  }
+
+  function renameRange(cp, from, to, find, replace) {
+    let n = 0;
+    for (let i = from; i <= to; i++) {
+      const c = cp.getChannel(i);
+      if (!c.used) continue;
+      const next = find ? c.name.split(find).join(replace) : replace;
+      if (next !== c.name) { c.name = next.slice(0, 16); cp.setChannel(c); n++; }
+    }
+    return n;
+  }
+
+  /* Copies the channels that exist. An empty slot in the source is skipped,
+     not propagated: "copy 1-200 to 101" should not blank 101-200 just because
+     most of 1-200 is empty. */
+  function copyRange(cp, from, to, dest) {
+    const src = [];
+    for (let i = from; i <= to; i++) src.push(cp.getChannel(i));
+    let n = 0;
+    src.forEach((c, k) => {
+      const target = dest + k;
+      if (target >= CHAN_NUM || !c.used) return;
+      cp.setChannel(Object.assign({}, c, { index: target }));
+      n++;
+    });
+    return n;
+  }
+
+  function moveRange(cp, from, to, dest) {
+    // note which slots really held something before the copy overwrites them
+    const wasUsed = [];
+    for (let i = from; i <= to; i++) wasUsed[i] = cp.getChannel(i).used;
+    const n = copyRange(cp, from, to, dest);
+    for (let i = from; i <= to; i++) {
+      if (i >= dest && i <= dest + (to - from)) continue;   // don't wipe the copy
+      if (wasUsed[i]) cp.clearChannel(i);
+    }
+    return n;
+  }
+
+  function deleteRange(cp, from, to) {
+    let n = 0;
+    for (let i = from; i <= to; i++) {
+      if (cp.getChannel(i).used) n++;
+      cp.clearChannel(i);
+    }
+    return n;
+  }
+
+  /* Close gaps: move every used channel down so they run 1..n with no holes. */
+  function compact(cp) {
+    const used = cp.channels().filter((c) => c.used);
+    for (let i = 0; i < CHAN_NUM; i++) cp.clearChannel(i);
+    used.forEach((c, k) => cp.setChannel(Object.assign({}, c, { index: k })));
+    return used.length;
+  }
+
+  // ---------------------------------------------------------------- export
+
+  const API = {
+    MEM_SIZE, BLOCK_SIZE, CHAN_NUM, CHAN_REC, NAME_LEN, TONE_OFF, ICF_ROW,
+    ADDR_CHANNELS, ADDR_CH_NAMES, ADDR_CH_AVAIL, ADDR_CH_SKIP, ADDR_BANDS,
+    ADDR_POWERON, ADDR_SETTINGS,
+    POWER, BANDWIDTH, BUSY_LOCK, SIGNALLING, SQL_MODE, PTT_ID, SCRAMBLER,
+    STEPS_KHZ,
+    HDR_TX, HDR_RX, END, MODEL_ID, OP,
+    checksumAdditive, checksumTwos, stuff, unstuff, buildFrame, parseFrame,
+    isOff, isDcs, toneLabel, parseTone, RX_ONLY_HZ, isRxOnly, mhzText, CTCSS_TONES, DCS_CODES, toneChoices, hex, hx, be32, be16,
+    Codeplug, icfParse, icfSerialize, blankChannel, VFO_SLOTS,
+    FM_COUNT, ADDR_FM_PRESETS, ADDR_FM_ENABLE, ADDR_FM_VFO,
+    CSV_COLUMNS, csvSerialize, csvParse, csvSplitLine,
+    REGIONS, FIELD_LABELS, fieldText, diffCodeplugs, validate,
+    regionOf, bitRuns, diffBits, formatBitDiff, bin8,
+    settingText, diffSettings, diffFm, diffVfo,
+    SETTINGS_FIELDS, KEY_FN, KEY_FN_HELP, SQL_LEVEL, TOT_LIST, LED_MODE, SCAN_TYPE,
+    POWER_OFF, RX_LIGHT, KEY_MODE, KEY_LOCK, DIS_MODE, INTRO_SCREEN, OFF_ON,
+    TX_CH_KIND, TX_TONE_KIND, SETTINGS_GROUPS, SETTINGS_HELP,
+    applyToRange, renameRange, copyRange, moveRange, deleteRange, compact,
+    blockPlan() {
+      const out = [];
+      for (let a = 0; a < MEM_SIZE; a += BLOCK_SIZE) {
+        out.push({ addr: a, len: Math.min(BLOCK_SIZE, MEM_SIZE - a) });
+      }
+      return out;
+    }
+  };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+  else root.TH2000 = API;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const T = window.TH2000;
+if (!T) {
+  document.body.insertAdjacentHTML('afterbegin',
+    '<p class="note"><b>th2000-core.js did not load.</b> Use the single-file build '
+    + '<code>th2000-compare.html</code>, or put th2000-core.js beside this page.</p>');
+  throw new Error('th2000-core.js not loaded');
+}
+
+const S = { a: null, b: null, rows: [], picked: new Set(), log: [] };
+
+/* Follows the theme chosen in the programmer, stored under the same key. */
+(function () {
+  let choice = 'auto';
+  try {
+    const v = window.localStorage.getItem('th2000.theme');
+    if (v !== null) choice = JSON.parse(v);
+  } catch (e) { /* storage unavailable: fall back to the system setting */ }
+  let dark = choice === 'dark';
+  if (choice === 'auto') {
+    try { dark = window.matchMedia('(prefers-color-scheme: dark)').matches; }
+    catch (e) { dark = false; }
+  }
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+})();
+
+function say(t, kind) { $('status').textContent = t; $('status').className = 'status' + (kind ? ' ' + kind : ''); }
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const hx = (v) => v.toString(16).toUpperCase().padStart(2, '0');
+const stamp = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+// ------------------------------------------------------------- file loading
+async function readFile(f) {
+  const buf = new Uint8Array(await f.arrayBuffer());
+  let bytes, kind;
+  if (/\.icf$/i.test(f.name) || buf[0] === 0x43 /* 'C' of COM1 */) {
+    let text = '';
+    for (const b of buf) text += String.fromCharCode(b);
+    const p = T.icfParse(text);
+    bytes = p.bytes; kind = p.records + ' records';
+  } else {
+    if (buf.length < T.MEM_SIZE) throw new Error('only ' + buf.length + ' bytes; a codeplug is ' + T.MEM_SIZE);
+    bytes = buf; kind = 'raw image';
+  }
+  const cp = new T.Codeplug(bytes);
+  return { name: f.name, size: f.size, kind, cp,
+    used: cp.channels().filter((c) => c.used).length, poweron: cp.powerOnName };
+}
+
+function paneHtml(side, d) {
+  const title = side === 'a' ? 'Left &mdash; baseline' : 'Right &mdash; after your change';
+  return '<h3>' + title + '</h3><div class="fn">' + esc(d.name) + '</div>'
+    + '<dl><dt>size</dt><dd>' + d.size + ' bytes, ' + esc(d.kind) + '</dd>'
+    + '<dt>power-on</dt><dd>' + esc(d.poweron || '\u2014') + '</dd>'
+    + '<dt>channels</dt><dd>' + d.used + ' in use</dd></dl>'
+    + (side === 'a' ? '<p class="tagline protected">Never written to.</p>' : '');
+}
+
+async function load(side, file) {
+  try {
+    const d = await readFile(file);
+    S[side] = d;
+    const el = $(side === 'a' ? 'dropA' : 'dropB');
+    el.classList.add('loaded');
+    el.innerHTML = paneHtml(side, d);
+    say('Loaded ' + d.name + ' on the ' + (side === 'a' ? 'left' : 'right') + '.', 'good');
+    recompute();
+  } catch (e) {
+    say('Could not read ' + file.name + ': ' + e.message, 'bad');
+  }
+}
+
+function wireDrop(elId, inputId, side) {
+  const el = $(elId), input = $(inputId);
+  el.onclick = () => input.click();
+  el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } };
+  input.onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) load(side, f); };
+  ['dragenter', 'dragover'].forEach((n) => el.addEventListener(n, (e) => {
+    e.preventDefault(); e.stopPropagation(); el.classList.add('over');
+  }));
+  ['dragleave', 'drop'].forEach((n) => el.addEventListener(n, (e) => {
+    e.preventDefault(); e.stopPropagation(); el.classList.remove('over');
+  }));
+  el.addEventListener('drop', (e) => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) load(side, f);
+  });
+}
+wireDrop('dropA', 'fileA', 'a');
+wireDrop('dropB', 'fileB', 'b');
+// a stray drop elsewhere should not navigate away
+['dragover', 'drop'].forEach((n) => window.addEventListener(n, (e) => e.preventDefault()));
+
+// -------------------------------------------------------------------- diff
+function recompute() {
+  const ready = S.a && S.b;
+  $('btnSwap').disabled = !ready;
+  $('btnPromote').disabled = !S.b;
+  if (!ready) { S.rows = []; renderRows(); return; }
+  S.rows = T.diffBits(S.a.cp, S.b.cp, { skipChannels: $('chkSkipCh').checked });
+  S.picked = new Set(S.rows.map((r) => r.addr));
+  renderRows();
+}
+
+function renderRows() {
+  const tb = $('rows'), empty = $('emptyMsg');
+  tb.innerHTML = '';
+  if (!S.a || !S.b) {
+    empty.style.display = ''; empty.textContent = 'Load a file on each side to see what differs.';
+    $('diffCount').textContent = ''; $('btnRecord').disabled = true; return;
+  }
+  if (!S.rows.length) {
+    empty.style.display = '';
+    empty.textContent = $('chkSkipCh').checked
+      ? 'No differences outside the channel area. Untick "Hide channel bytes" to look there too.'
+      : 'These two files are identical.';
+    $('diffCount').textContent = '0 bytes'; $('btnRecord').disabled = true; return;
+  }
+  empty.style.display = 'none';
+  $('diffCount').textContent = S.rows.length + ' byte' + (S.rows.length === 1 ? '' : 's');
+  const frag = document.createDocumentFragment();
+  for (const r of S.rows) {
+    const tr = document.createElement('tr');
+    tr.dataset.addr = r.addr;
+    if (S.picked.has(r.addr)) tr.className = 'pick';
+    const off = (r.addr >= T.ADDR_SETTINGS && r.addr < T.ADDR_SETTINGS + 32)
+      ? '+' + (r.addr - T.ADDR_SETTINGS) : '';
+    tr.innerHTML = '<td><input type="checkbox"' + (S.picked.has(r.addr) ? ' checked' : '') + '></td>'
+      + '<td>0x' + r.addr.toString(16).toUpperCase().padStart(4, '0') + '</td>'
+      + '<td>' + off + '</td><td>' + esc(r.region) + '</td>'
+      + '<td>' + hx(r.from) + ' ' + T.bin8(r.from) + '</td>'
+      + '<td>' + hx(r.to) + ' ' + T.bin8(r.to) + '</td>'
+      + '<td class="bits">' + esc(r.bitText) + '</td>'
+      + '<td class="val">' + r.fieldFrom + ' &rarr; ' + r.fieldTo + '</td>';
+    frag.appendChild(tr);
+  }
+  tb.appendChild(frag);
+  updateRecordState();
+}
+
+$('rows').addEventListener('click', (e) => {
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  const addr = +tr.dataset.addr;
+  if (S.picked.has(addr)) S.picked.delete(addr); else S.picked.add(addr);
+  tr.classList.toggle('pick', S.picked.has(addr));
+  const cb = tr.querySelector('input');
+  if (cb) cb.checked = S.picked.has(addr);
+  updateRecordState();
+});
+$('btnAll').onclick = () => { S.picked = new Set(S.rows.map((r) => r.addr)); renderRows(); };
+$('btnNone').onclick = () => { S.picked = new Set(); renderRows(); };
+$('chkSkipCh').onchange = recompute;
+$('chkOnlyPicked').onchange = updateRecordState;
+
+$('btnSwap').onclick = () => {
+  const t = S.a; S.a = S.b; S.b = t;
+  $('dropA').innerHTML = paneHtml('a', S.a);
+  $('dropB').innerHTML = paneHtml('b', S.b);
+  recompute();
+  say('Swapped sides.');
+};
+$('btnPromote').onclick = () => {
+  S.a = S.b; S.b = null;
+  $('dropA').innerHTML = paneHtml('a', S.a);
+  const el = $('dropB');
+  el.classList.remove('loaded');
+  el.innerHTML = '<h3>Right &mdash; after your change</h3>'
+    + '<p class="tagline">Drop the file you saved after changing one setting.</p>';
+  recompute();
+  say('That file is now the baseline. Change the next setting and drop the result on the right.', 'good');
+};
+
+// ------------------------------------------------------------------ record
+function currentRows() {
+  return $('chkOnlyPicked').checked ? S.rows.filter((r) => S.picked.has(r.addr)) : S.rows;
+}
+function updateRecordState() {
+  $('btnRecord').disabled = !(S.a && S.b && currentRows().length && $('what').value.trim());
+}
+$('what').addEventListener('input', updateRecordState);
+
+$('btnRecord').onclick = () => {
+  const rows = currentRows();
+  if (!rows.length) return;
+  S.log.push({
+    what: $('what').value.trim(),
+    left: S.a.name, right: S.b.name,
+    when: stamp(),
+    rows: rows.map((r) => ({ addr: r.addr, region: r.region, from: r.from, to: r.to,
+      bits: r.bits.slice(), bitText: r.bitText, fieldFrom: r.fieldFrom, fieldTo: r.fieldTo }))
+  });
+  $('what').value = '';
+  updateRecordState();
+  renderLog();
+  say('Recorded. ' + S.log.length + ' observation' + (S.log.length === 1 ? '' : 's') + ' so far \u2014 export before you close the tab.', 'good');
+};
+
+function renderLog() {
+  const list = $('logList');
+  list.innerHTML = S.log.map((e, i) =>
+    '<li><button class="rm" data-rm="' + i + '">remove</button>'
+    + '<div class="what">' + (i + 1) + '. ' + esc(e.what) + '</div>'
+    + '<div class="meta">' + esc(e.left) + ' \u2192 ' + esc(e.right) + ' &middot; ' + e.when
+    + ' &middot; ' + e.rows.length + ' byte' + (e.rows.length === 1 ? '' : 's') + '</div>'
+    + '<pre>' + esc(tableFor(e.rows)) + '</pre></li>').join('');
+  $('logEmpty').style.display = S.log.length ? 'none' : '';
+  $('count').textContent = S.log.length
+    ? S.log.length + ' observation' + (S.log.length === 1 ? '' : 's')
+    : 'no observations yet';
+  $('btnExport').disabled = !S.log.length;
+  $('btnClearLog').disabled = !S.log.length;
+  $('unsaved').style.display = S.log.length ? '' : 'none';
+}
+$('logList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-rm]');
+  if (!b) return;
+  S.log.splice(+b.dataset.rm, 1);
+  renderLog();
+  say('Removed one observation.');
+});
+$('btnClearLog').onclick = () => {
+  if (S.log.length && !confirm('Discard all ' + S.log.length + ' observations?')) return;
+  S.log = []; renderLog(); say('Log cleared.');
+};
+
+function tableFor(rows) {
+  const head = 'addr    off  region                    before        after         bits       value';
+  const line = rows.map((r) => {
+    const off = (r.addr >= T.ADDR_SETTINGS && r.addr < T.ADDR_SETTINGS + 32)
+      ? '+' + (r.addr - T.ADDR_SETTINGS) : '';
+    return ['0x' + r.addr.toString(16).toUpperCase().padStart(4, '0'),
+      off.padEnd(4), r.region.slice(0, 24).padEnd(25),
+      (hx(r.from) + ' ' + T.bin8(r.from)).padEnd(13),
+      (hx(r.to) + ' ' + T.bin8(r.to)).padEnd(13),
+      r.bitText.padEnd(10), r.fieldFrom + ' -> ' + r.fieldTo].join(' ');
+  });
+  return [head, '-'.repeat(head.length)].concat(line).join('\n');
+}
+
+// ------------------------------------------------------------------ export
+function buildExport() {
+  const out = [];
+  out.push('TH-2000 codeplug mapping log');
+  out.push('generated ' + stamp());
+  out.push(S.log.length + ' observation' + (S.log.length === 1 ? '' : 's'));
+  out.push('');
+  out.push('Each entry is one change made in the manufacturer\u2019s software, with the');
+  out.push('bytes that moved as a result. "off" is the offset within the 32-byte');
+  out.push('settings block at 0x2020. "value" is the field read out of just those bits.');
+  out.push('');
+  S.log.forEach((e, i) => {
+    out.push('=== ' + (i + 1) + '. ' + e.what + ' ===');
+    out.push('baseline : ' + e.left);
+    out.push('changed  : ' + e.right);
+    out.push('recorded : ' + e.when);
+    out.push('');
+    out.push(tableFor(e.rows));
+    out.push('');
+  });
+  out.push('--- machine readable ---');
+  out.push(JSON.stringify(S.log.map((e) => ({
+    what: e.what, left: e.left, right: e.right, when: e.when,
+    rows: e.rows.map((r) => ({ addr: r.addr, region: r.region,
+      from: r.from, to: r.to, bits: r.bits, from_val: r.fieldFrom, to_val: r.fieldTo }))
+  })), null, 1));
+  return out.join('\n') + '\n';
+}
+
+$('btnExport').onclick = () => {
+  const text = buildExport();
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'th2000-mapping-' + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '') + '.txt';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  S.exported = S.log.length;
+  say('Exported ' + S.log.length + ' observation' + (S.log.length === 1 ? '' : 's') + '.', 'good');
+};
+
+window.addEventListener('beforeunload', (e) => {
+  if (S.log.length && S.exported !== S.log.length) { e.preventDefault(); e.returnValue = ''; }
+});
+
+renderLog();
+</script>
+</body>
+</html>

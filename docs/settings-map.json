@@ -1,0 +1,539 @@
+[
+ {
+  "addr": 8224,
+  "off": 0,
+  "name": "P1 Short",
+  "lo": 0,
+  "hi": 3,
+  "width": 4,
+  "values_seen": [
+   0,
+   1,
+   13
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8224,
+  "off": 0,
+  "name": "P2 Short",
+  "lo": 4,
+  "hi": 7,
+  "width": 4,
+  "values_seen": [
+   0,
+   3,
+   13
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8225,
+  "off": 1,
+  "name": "P1 Long",
+  "lo": 0,
+  "hi": 3,
+  "width": 4,
+  "values_seen": [
+   0,
+   9,
+   13
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8225,
+  "off": 1,
+  "name": "P2 Long",
+  "lo": 4,
+  "hi": 7,
+  "width": 4,
+  "values_seen": [
+   0,
+   4,
+   13
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8226,
+  "off": 2,
+  "name": "RX Light",
+  "lo": 0,
+  "hi": 1,
+  "width": 2,
+  "values_seen": [
+   0,
+   1,
+   2
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": false
+ },
+ {
+  "addr": 8227,
+  "off": 3,
+  "name": "Volume Level",
+  "lo": 0,
+  "hi": 4,
+  "width": 5,
+  "values_seen": [
+   0,
+   7,
+   31
+  ],
+  "observations": 3,
+  "encoding": "stored = displayed value (0-31)",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8236,
+  "off": 12,
+  "name": "SQL Level",
+  "lo": 0,
+  "hi": 3,
+  "width": 4,
+  "values_seen": [
+   0,
+   1,
+   3,
+   9
+  ],
+  "observations": 3,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8237,
+  "off": 13,
+  "name": "TX Channel Select",
+  "lo": 0,
+  "hi": 0,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8237,
+  "off": 13,
+  "name": "Intro Screen",
+  "lo": 3,
+  "hi": 4,
+  "width": 2,
+  "values_seen": [
+   0,
+   1,
+   2
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": false
+ },
+ {
+  "addr": 8237,
+  "off": 13,
+  "name": "BEEP",
+  "lo": 7,
+  "hi": 7,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8238,
+  "off": 14,
+  "name": "TOT",
+  "lo": 0,
+  "hi": 3,
+  "width": 4,
+  "values_seen": [
+   0,
+   1,
+   2,
+   9
+  ],
+  "observations": 4,
+  "encoding": "option index, 0=None .. 9=270 Second",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8238,
+  "off": 14,
+  "name": "Power Off",
+  "lo": 5,
+  "hi": 6,
+  "width": 2,
+  "values_seen": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "observations": 3,
+  "encoding": "option index",
+  "confirmed_width": false
+ },
+ {
+  "addr": 8239,
+  "off": 15,
+  "name": "TX Tone",
+  "lo": 6,
+  "hi": 6,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8240,
+  "off": 16,
+  "name": "LED Mode",
+  "lo": 0,
+  "hi": 2,
+  "width": 3,
+  "values_seen": [
+   0,
+   1,
+   2,
+   3,
+   6,
+   7
+  ],
+  "observations": 5,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8240,
+  "off": 16,
+  "name": "DIS Mode",
+  "lo": 4,
+  "hi": 5,
+  "width": 2,
+  "values_seen": [
+   0,
+   1,
+   2
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": false
+ },
+ {
+  "addr": 8240,
+  "off": 16,
+  "name": "Scan Type",
+  "lo": 6,
+  "hi": 7,
+  "width": 2,
+  "values_seen": [
+   0,
+   1,
+   2
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": false
+ },
+ {
+  "addr": 8242,
+  "off": 18,
+  "name": "Eliminate Squelch Tail When No CTC/DCS Signaling",
+  "lo": 6,
+  "hi": 6,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8242,
+  "off": 18,
+  "name": "Use Boot Strap Password",
+  "lo": 7,
+  "hi": 7,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8244,
+  "off": 20,
+  "name": "Light",
+  "lo": 0,
+  "hi": 2,
+  "width": 3,
+  "values_seen": [
+   0,
+   1,
+   6
+  ],
+  "observations": 3,
+  "encoding": "stored = displayed level minus 1 (display 1-7)",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8244,
+  "off": 20,
+  "name": "Dual Wait",
+  "lo": 4,
+  "hi": 4,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8244,
+  "off": 20,
+  "name": "Key Lock",
+  "lo": 5,
+  "hi": 5,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8244,
+  "off": 20,
+  "name": "Radio Monitor",
+  "lo": 6,
+  "hi": 6,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8246,
+  "off": 22,
+  "name": "Key Mode",
+  "lo": 0,
+  "hi": 1,
+  "width": 2,
+  "values_seen": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "observations": 3,
+  "encoding": "option index",
+  "confirmed_width": false
+ },
+ {
+  "addr": 8247,
+  "off": 23,
+  "name": "P3 Short",
+  "lo": 0,
+  "hi": 3,
+  "width": 4,
+  "values_seen": [
+   0,
+   5,
+   13
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8247,
+  "off": 23,
+  "name": "P3 Long",
+  "lo": 4,
+  "hi": 7,
+  "width": 4,
+  "values_seen": [
+   0,
+   2,
+   13
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8248,
+  "off": 24,
+  "name": "P4 Short",
+  "lo": 0,
+  "hi": 3,
+  "width": 4,
+  "values_seen": [
+   0,
+   6,
+   13
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8248,
+  "off": 24,
+  "name": "P4 Long",
+  "lo": 4,
+  "hi": 7,
+  "width": 4,
+  "values_seen": [
+   0,
+   7,
+   13
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8249,
+  "off": 25,
+  "name": "P5 Short",
+  "lo": 0,
+  "hi": 3,
+  "width": 4,
+  "values_seen": [
+   0,
+   8,
+   13
+  ],
+  "observations": 2,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8250,
+  "off": 26,
+  "name": "Use Boot Strap Password",
+  "lo": 0,
+  "hi": 0,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8251,
+  "off": 27,
+  "name": "Use Boot Strap Password",
+  "lo": 1,
+  "hi": 1,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8252,
+  "off": 28,
+  "name": "Use Boot Strap Password",
+  "lo": 0,
+  "hi": 1,
+  "width": 2,
+  "values_seen": [
+   0,
+   3
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": false
+ },
+ {
+  "addr": 8253,
+  "off": 29,
+  "name": "Use Boot Strap Password",
+  "lo": 2,
+  "hi": 2,
+  "width": 1,
+  "values_seen": [
+   0,
+   1
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": true
+ },
+ {
+  "addr": 8254,
+  "off": 30,
+  "name": "Use Boot Strap Password",
+  "lo": 0,
+  "hi": 2,
+  "width": 3,
+  "values_seen": [
+   0,
+   5
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": false
+ },
+ {
+  "addr": 8255,
+  "off": 31,
+  "name": "Use Boot Strap Password",
+  "lo": 1,
+  "hi": 2,
+  "width": 2,
+  "values_seen": [
+   0,
+   3
+  ],
+  "observations": 1,
+  "encoding": "option index",
+  "confirmed_width": false
+ }
+]

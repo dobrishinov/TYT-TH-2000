@@ -1,0 +1,2452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TH-2000 codeplug</title>
+<style>
+:root{
+  /* Instrument-panel palette: pale cool grey face, graphite legends, and the
+     two accents radio gear has always used - red for outbound/transmit,
+     teal for inbound. The accents encode direction of data flow. */
+  --panel:#E4E8EA;
+  --face:#EFF2F3;
+  --recess:#C9D1D6;
+  --edge:#AEB9C0;
+  --ink:#171C21;
+  --ink-2:#5A6670;
+  --ink-3:#8794A0;
+  --rx:#0E6E86;
+  --tx:#BE3227;
+  --warn:#8A5A10;
+  --warn-bg:#F5E6C8;
+  --lamp:#A9B3B9;
+
+  --surface:#fff;          /* inputs, panes, code blocks */
+  --line:#D7DDE1;          /* hairline inside a surface */
+  --row-hover:#DCE4E8;
+  --row-sel:#CBDDE3;
+  --btn-a:#fff; --btn-b:#E7EBED; --btn-hover-b:#DCE2E5;
+  --bad-bg:#FBEDEB; --bad-ink:#8C241C;
+  --good-bg:#E6F1F3; --good-ink:#0B5566;
+  --tag-add-bg:#D6E9EE; --tag-chg-bg:#E7E1CE; --tag-chg-ink:#6B5416;
+  --shadow:rgba(0,0,0,.18);
+  --drop-over:#DCE9ED;
+  --sheen:#fff;
+  --rx-edge:#8FB4BF; --tx-edge:#D19A93;
+
+  color-scheme:light;
+  accent-color:#0E6E86;
+
+  --mono:ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark; accent-color:#4FB4CE;
+  --panel:#191F24; --face:#212930; --recess:#2A333A; --edge:#3B464E;
+  --ink:#E3E9ED; --ink-2:#A3B0B9; --ink-3:#7A8892;
+  --rx:#4FB4CE; --tx:#E4685D; --warn:#D8A756;
+  --lamp:#48535B;
+  --surface:#1A2126; --line:#333D45;
+  --row-hover:#2A343B; --row-sel:#28414A;
+  --btn-a:#2B343B; --btn-b:#232B31; --btn-hover-b:#313B43;
+  --bad-bg:#3A2523; --bad-ink:#F0A69D;
+  --good-bg:#13333B; --good-ink:#8FD3E4;
+  --tag-add-bg:#17383F; --tag-chg-bg:#3A3323; --tag-chg-ink:#E0C68A;
+  --warn-bg:#3A3122;
+  --shadow:rgba(0,0,0,.55);
+  --drop-over:#22343A;
+  --sheen:rgba(255,255,255,.05);
+  --rx-edge:#2E6274; --tx-edge:#773934;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--panel);color:var(--ink);
+  font:14px/1.45 var(--ui);
+  display:flex;flex-direction:column;
+}
+/* silkscreened panel legend */
+.legend{
+  font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-2);
+}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--rx);outline-offset:2px}
+
+/* ---------------------------------------------------------------- panel */
+.panel{
+  background:var(--face);border-bottom:1px solid var(--edge);
+  box-shadow:inset 0 -1px 0 var(--sheen);
+  padding:10px 16px;display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center;
+}
+.plate{display:flex;flex-direction:column;line-height:1.15;margin-right:4px}
+.plate b{font:600 16px/1.1 var(--mono);letter-spacing:.02em}
+.plate span{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+  max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plate[title]{cursor:help}
+
+.link{display:flex;align-items:center;gap:7px}
+.lamp{
+  width:9px;height:9px;border-radius:50%;background:var(--lamp);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.28);flex:none;
+}
+.lamp.on{background:var(--rx)}
+.lamp.busy-rx{background:var(--rx);animation:blink .7s steps(2,end) infinite}
+.lamp.busy-tx{background:var(--tx);animation:blink .45s steps(2,end) infinite}
+.lamp.err{background:var(--tx)}
+@keyframes blink{50%{opacity:.25}}
+@media(prefers-reduced-motion:reduce){.lamp{animation:none!important}}
+
+.btn{
+  border:1px solid var(--edge);background:linear-gradient(var(--btn-a),var(--btn-b));
+  border-radius:3px;padding:6px 12px;cursor:pointer;
+  font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+}
+.btn:hover:not(:disabled){background:linear-gradient(var(--btn-a),var(--btn-hover-b))}
+.btn:active:not(:disabled){background:var(--recess);box-shadow:inset 0 1px 2px rgba(0,0,0,.16)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn.read{color:var(--rx);border-color:var(--rx-edge)}
+.btn.write{color:var(--tx);border-color:var(--tx-edge)}
+.spacer{flex:1 1 auto}
+.menu{position:relative}
+.menuitems{
+  position:absolute;top:calc(100% + 4px);left:0;z-index:30;min-width:150px;
+  background:var(--face);border:1px solid var(--edge);border-radius:3px;
+  box-shadow:0 6px 18px var(--shadow);padding:4px;display:flex;flex-direction:column;gap:3px;
+}
+.menuitems[hidden]{display:none}
+.menuitems .btn{text-align:left;border:0;background:transparent;padding:6px 9px}
+.menuitems .btn:hover:not(:disabled){background:var(--recess)}
+
+/* 22 segments, one per 512-byte block. The last block is short, which is why
+   it is drawn narrower - the shape of the transfer is a fact about the radio. */
+.meter{display:flex;align-items:center;gap:10px;flex:1 1 260px;min-width:220px}
+.segs{display:flex;gap:2px;flex:1;height:16px}
+.seg{flex:1 1 0;background:var(--recess);box-shadow:inset 0 0 0 1px var(--shadow)}
+.seg:last-child{flex:0 0 12px}
+.seg.done{background:var(--rx)}
+.seg.done.tx{background:var(--tx)}
+.seg.active{background:var(--ink-3)}
+.seg.err{background:var(--tx);opacity:.45}
+.meter output{font:11px/1 var(--mono);color:var(--ink-2);text-align:center}
+
+/* ------------------------------------------------------------ main split */
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 6px var(--rail,500px);min-height:0}
+.splitter{
+  background:var(--recess);border-left:1px solid var(--edge);border-right:1px solid var(--edge);
+  cursor:col-resize;touch-action:none;position:relative;
+}
+.splitter::after{
+  content:"";position:absolute;top:50%;left:1px;width:2px;height:26px;margin-top:-13px;
+  background:var(--ink-3);border-radius:1px;opacity:.55;
+}
+.splitter:hover::after,.splitter.drag::after{opacity:1;background:var(--rx)}
+.grid-wrap{overflow:auto;min-width:0}
+table{border-collapse:collapse;width:100%;min-width:780px;table-layout:fixed;
+  font-variant-numeric:tabular-nums}
+thead th{
+  position:sticky;top:0;z-index:1;background:var(--recess);
+  border-bottom:1px solid var(--edge);
+  padding:6px 8px;text-align:left;white-space:nowrap;
+  font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);
+}
+tbody td{padding:3px 8px;border-bottom:1px solid var(--line);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--row-hover)}
+tbody tr[aria-selected=true]{background:var(--row-sel);box-shadow:inset 2px 0 0 var(--rx)}
+tbody tr.free td{color:var(--ink-3)}
+.num{font:12px/1.4 var(--mono);color:var(--ink-2);width:1%}
+.freq{font:12.5px/1.4 var(--mono)}
+.small{font:11px/1.4 var(--mono);color:var(--ink-3)}
+.skipped{color:var(--warn);font-weight:600}
+tbody td.delcell{padding:0;text-align:center;overflow:visible;text-overflow:clip}
+.rowdel{
+  border:0;background:transparent;color:var(--ink-3);cursor:pointer;
+  font:15px/19px var(--ui);width:20px;height:20px;padding:0;border-radius:50%;
+  display:inline-block;vertical-align:middle;transition:background .12s,color .12s;
+}
+.rowdel:hover{color:var(--tx);background:rgba(190,50,39,.12)}
+.rowdel:active{background:rgba(190,50,39,.22)}
+@media(prefers-reduced-motion:reduce){.rowdel{transition:none}}
+tbody tr:not(:hover) .rowdel{opacity:.35}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--lamp);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.dot.used{background:var(--rx)}
+.cellEdit{
+  display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;
+  border:1px solid var(--rx);border-radius:2px;padding:0 2px;
+  font:12px/1.5 var(--mono);background:var(--surface);height:19px;
+}
+.cellEdit[aria-invalid=true]{border-color:var(--tx);background:var(--bad-bg)}
+
+/* ----------------------------------------------------------------- rail */
+.rail{display:flex;flex-direction:column;min-height:0;background:var(--face);min-width:0;overflow-x:hidden}
+.rail section{border-bottom:1px solid var(--edge);padding:12px 14px}
+.tabpanel > section:last-child,.subpanel > section:last-child{border-bottom:0}
+.subhead{
+  display:block;margin:16px 0 8px;font-size:10px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-2);
+  border-bottom:1px solid var(--edge);padding-bottom:5px;
+}
+.subhead:first-child{margin-top:0}
+details.grp{margin:0}
+details.grp + details.grp{margin-top:20px}     /* room between one group and the next */
+details.grp > summary.subhead{
+  display:list-item;                            /* keeps the browser's own marker */
+  cursor:pointer;user-select:none;margin-top:0;
+}
+details.grp > summary.subhead:hover{color:var(--ink)}
+.rail h2{margin:0 0 10px;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(146px,1fr));gap:8px 10px}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.f.wide{grid-column:1/-1}
+.f label{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.fixed{color:var(--warn);letter-spacing:.04em}
+.f[title],.f[title] label,.f[title] input[disabled]{cursor:help}
+.f[title] label{display:block;width:100%}
+.f input,.f select{
+  border:1px solid var(--edge);border-radius:2px;background:var(--surface);
+  padding:5px 6px;font:12.5px/1.2 var(--mono);color:inherit;
+  min-width:0;width:100%;max-width:100%;
+}
+.f select{padding-right:20px}
+select.cellEdit{padding-right:16px}
+.f select{text-overflow:ellipsis}
+.f label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f input[aria-invalid=true]{border-color:var(--tx);background:var(--bad-bg)}
+.rowbtns{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.hint{margin:8px 0 0;font-size:11.5px;color:var(--ink-2)}
+.note{
+  margin:0 0 10px;padding:7px 9px;border-left:3px solid var(--warn);
+  background:var(--warn-bg);font-size:11.5px;color:var(--warn);
+}
+.log{flex:1;min-height:120px;display:flex;flex-direction:column;padding:12px 14px;border-bottom:0}
+.log pre{
+  flex:1;margin:0;overflow:auto;background:var(--surface);border:1px solid var(--edge);
+  padding:7px 8px;font:11px/1.5 var(--mono);white-space:pre-wrap;word-break:break-all;
+}
+.log pre b{color:var(--tx);font-weight:600}
+.log pre i{color:var(--rx);font-style:normal}
+.log pre s{color:var(--ink-3);text-decoration:none}
+
+/* --------------------------------------------------------------- status */
+.status{
+  border-top:1px solid var(--edge);background:var(--face);
+  padding:7px 16px;font-size:12px;display:flex;gap:10px;align-items:center;
+}
+.status .msg{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status .btn{padding:4px 9px;flex:none}
+.status.bad{background:var(--bad-bg);color:var(--bad-ink)}
+.status.good{background:var(--good-bg);color:var(--good-ink)}
+
+.unsupported{margin:0;padding:10px 12px;background:var(--warn-bg);border-left:3px solid var(--warn);color:var(--warn);font-size:12.5px}
+.unsupported code{font:12px/1 var(--mono);background:var(--surface);padding:1px 4px;border:1px solid var(--edge)}
+details.about{padding:12px 14px;border-top:1px solid var(--edge);background:var(--face)}
+details.about summary{cursor:pointer;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+details.about p{margin:9px 0 0;font-size:11.5px;color:var(--ink-2)}
+.file{display:none}
+
+
+/* tabs */
+.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--edge);background:var(--recess)}
+.tabs button{flex:1 1 auto;min-width:max-content;white-space:nowrap;padding:8px 10px}
+.tabs button{
+  flex:1;border:0;background:transparent;padding:8px 4px;cursor:pointer;
+  font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-2);border-bottom:2px solid transparent;
+}
+.tabs button[aria-selected=true]{background:var(--face);color:var(--ink);border-bottom-color:var(--rx)}
+.tabpanel{display:none;flex-direction:column;min-height:0}
+.tabpanel.on{display:flex;flex:1;overflow-y:auto;overflow-x:hidden}
+.subtabs{
+  display:flex;gap:3px;padding:9px 14px 0;background:var(--face);
+  position:sticky;top:0;z-index:2;
+}
+.subtabs button{
+  flex:1 1 auto;border:1px solid var(--edge);border-bottom:0;background:var(--recess);
+  border-radius:3px 3px 0 0;padding:6px 8px;cursor:pointer;white-space:nowrap;
+  font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+}
+.subtabs button[aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:inset 0 2px 0 var(--rx)}
+.subpanel{display:none}
+.subpanel.on{display:block;border-top:1px solid var(--edge)}
+
+/* modal */
+.scrim{
+  position:fixed;inset:0;background:rgba(23,28,33,.5);display:none;
+  align-items:center;justify-content:center;padding:20px;z-index:20;
+}
+.scrim.on{display:flex}
+.modal{
+  background:var(--face);border:1px solid var(--edge);border-radius:3px;
+  max-width:720px;width:100%;max-height:86vh;display:flex;flex-direction:column;
+  box-shadow:0 8px 32px var(--shadow);
+}
+.modal h2{margin:0;padding:12px 16px;border-bottom:1px solid var(--edge);
+  font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+.modal .body{padding:14px 16px;overflow:auto;font-size:13px}
+.modal .foot{padding:12px 16px;border-top:1px solid var(--edge);display:flex;gap:8px;justify-content:flex-end}
+
+/* diff + issues */
+.summary{
+  display:flex;gap:20px;flex-wrap:wrap;font:12px/1.4 var(--mono);
+  margin:16px 0 4px;padding-top:12px;border-top:1px solid var(--edge);
+}
+.summary b{display:block;font:600 20px/1.1 var(--mono)}
+.dlist{margin:0;padding:0;list-style:none;font-size:12.5px}
+.dlist li{padding:5px 0;border-bottom:1px solid var(--line)}
+.dlist li:last-child{border-bottom:0}
+.dlist .k{font:11px/1.4 var(--mono);color:var(--ink-3);margin-right:6px}
+.dirline{
+  display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+  margin:0 0 12px;padding:7px 10px;border:1px solid var(--edge);border-radius:3px;
+  background:var(--face);font:12px/1.3 var(--ui);text-align:center;
+}
+.dirline .side{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dirline .from{color:var(--ink-2)}
+.dirline .to{color:var(--rx)}
+.dirline .arrow{color:var(--ink-3);font-size:14px;flex:none}
+.dhead{margin:14px 0 6px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.tag{font:10px/1.5 var(--ui);font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:1px 5px;border-radius:2px;margin-right:6px}
+.tag.add{background:var(--tag-add-bg);color:var(--good-ink)}
+.tag.del{background:var(--bad-bg);color:var(--bad-ink)}
+.tag.chg{background:var(--tag-chg-bg);color:var(--tag-chg-ink)}
+.tag.err{background:var(--bad-bg);color:var(--bad-ink)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.arrow{color:var(--ink-3);margin:0 4px}
+.muted{color:var(--ink-2);font-size:12px}
+.bitdiff{
+  background:var(--surface);border:1px solid var(--edge);padding:8px 10px;margin:8px 0 0;
+  font:11px/1.55 var(--mono);white-space:pre;overflow:auto;max-height:300px;
+}
+.modal details{margin-top:10px}
+details.bytes{margin-top:16px;border-top:1px solid var(--edge);padding-top:10px}
+details.bytes summary{cursor:pointer;color:var(--ink-2)}
+.modal details summary{cursor:pointer}
+
+/* bulk + fm */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.grid2[hidden]{display:none}
+.grid2 .wide{grid-column:1/-1}
+.fmlist{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;
+  font:12px/1.4 var(--mono);margin-top:4px;
+}
+.fmlist label{display:flex;align-items:center;gap:6px;color:var(--ink-2);font-size:11px}
+.fmlist input[type=text]{
+  width:100%;border:1px solid var(--edge);border-radius:2px;padding:3px 5px;
+  font:12px/1.2 var(--mono);background:var(--surface);color:inherit;
+}
+
+@media(max-width:1160px){
+  main{grid-template-columns:1fr;grid-template-rows:minmax(180px,1fr) auto}
+  .splitter{display:none}
+  .grid-wrap{border-bottom:1px solid var(--edge)}
+  .rail{max-height:62vh;overflow:auto;border-top:1px solid var(--edge)}
+}
+@media(max-width:620px){
+  .panel{padding:8px 10px;gap:8px 10px}
+  .plate{margin-right:0}
+  .meter{flex-basis:100%;order:9}
+  .btn{padding:8px 11px}          /* easier to hit with a thumb */
+  .tabs button{flex:1 1 40%;padding:10px 8px}
+  section.block,.rail section{padding:10px}
+  .fields,.grid2{grid-template-columns:1fr}
+  .fmlist{grid-template-columns:1fr}
+  thead th,tbody td{padding:4px 6px}
+  .modal{max-height:92vh}
+  .status{padding:7px 10px}
+}
+</style>
+</head>
+<body>
+
+<header class="panel">
+  <div class="plate" title="A codeplug is a radio&rsquo;s whole configuration in one file &mdash; every channel and every setting. The name is Motorola&rsquo;s: it used to be a physical module of diodes you plugged in to define the channels.">
+    <b>TH-2000</b><span id="plateLine">codeplug &middot; 200 ch</span>
+  </div>
+
+  <button class="btn" id="btnOpen" title="Opens a codeplug: .icf from the manufacturer’s software or from here, .img from CHIRP, or a raw .bin. Anything already loaded is replaced.">Open .icf</button>
+  <button class="btn" id="btnSaveIcf" disabled title="Writes everything — all 200 channels, the radio settings, the FM presets and the intro screen. Opens in the manufacturer’s software, in CHIRP, and back in here.">Save .icf</button>
+  <div class="menu">
+    <button class="btn" id="btnToolsMenu" aria-haspopup="true" aria-expanded="false">Tools &#9662;</button>
+    <div class="menuitems" id="menuTools" hidden>
+      <button class="btn" id="btnCsvIn" title="Reads channels from a CSV, including one exported by CHIRP. Radio settings, FM presets and the intro screen are not in a CSV and are left alone.">Import channels (CSV)</button>
+      <button class="btn" id="btnCsvOut" disabled title="Writes the channels only. Radio settings, FM presets and the intro screen are not included — use .icf for a complete copy.">Export channels (CSV)</button>
+      <button class="btn" id="btnPrint" disabled>Print channel list</button>
+      <button class="btn" id="btnCompare" disabled title="Loads a second codeplug and shows what differs: channels, radio settings, FM, then the raw bytes underneath.">Compare with&hellip;</button>
+    </div>
+  </div>
+
+  <span class="spacer"></span>
+
+  <div class="link"><span class="lamp" id="lamp"></span><span class="legend" id="linkText">Not connected</span></div>
+  <button class="btn" id="btnConnect">Connect</button>
+  <button class="btn read" id="btnRead" disabled>Read radio</button>
+  <button class="btn write" id="btnWrite" disabled>Write radio</button>
+
+  <div class="meter">
+    <div class="segs" id="segs" role="img" aria-label="Transfer progress by block"></div>
+    <output id="meterText">idle</output>
+  </div>
+</header>
+
+<main>
+  <div class="grid-wrap">
+    <table>
+      <colgroup>
+        <col style="width:24px"><col style="width:42px">
+        <col style="width:16%"><col style="width:13%"><col style="width:13%">
+        <col style="width:9%"><col style="width:11%"><col style="width:11%">
+        <col style="width:7%"><col style="width:8%"><col style="width:6%">
+        <col style="width:8%"><col style="width:36px">
+      </colgroup>
+      <thead><tr>
+        <th></th><th>Ch</th><th>Name</th><th>Receive</th><th>Transmit</th>
+        <th>Shift</th><th>Encode</th><th>Decode</th><th>Pwr</th><th>BW</th><th>Step</th><th>Scan</th><th></th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <div class="splitter" id="splitter" role="separator" aria-orientation="vertical"
+       tabindex="0" title="Drag to resize. Double-click to reset."></div>
+
+  <aside class="rail">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabChannel" title="The 200 memory channels, bulk edits and the checks" aria-selected="true" data-panel="panChannel">Channels</button>
+      <button role="tab" id="tabVfo" title="The two VFOs, one per band" aria-selected="false" data-panel="panVfo">VFO&nbsp;A/B</button>
+      <button role="tab" id="tabFm" title="FM broadcast presets and the FM VFO" aria-selected="false" data-panel="panFm">FM&nbsp;radio</button>
+      <button role="tab" id="tabSettings" title="Radio-wide settings, and the band limits" aria-selected="false" data-panel="panSettings">Radio&nbsp;settings</button>
+      <button role="tab" id="tabOptions" title="What happens when talking to the radio, and the traffic log" aria-selected="false" data-panel="panOptions">Options</button>
+    </div>
+
+    <div class="tabpanel on" id="panChannel">
+      <div class="subtabs" role="tablist">
+        <button role="tab" id="subChannel" aria-selected="true" data-sub="subPanChannel">Channel</button>
+        <button role="tab" id="subBulk" aria-selected="false" data-sub="subPanBulk">Bulk edit</button>
+        <button role="tab" id="subChecks" aria-selected="false" data-sub="subPanChecks">Checks</button>
+      </div>
+      <div class="subpanel on" id="subPanChannel">
+      <section>
+        <h2>Channel <span id="chNum">1</span></h2>
+        <div id="editor"></div>
+        <div class="rowbtns">
+          <button class="btn" id="btnApply" title="Writes what is on screen into this channel. A free channel becomes used.">Apply</button>
+          <button class="btn" id="btnClear" title="Empties this channel. Only changes the codeplug in front of you.">Clear channel</button>
+          <button class="btn" id="btnCopyDown" title="Copies this channel into the next slot, so a repeater pair or a block of similar channels is quick to build.">Copy to next</button>
+        </div>
+        <p class="hint" id="chHint"></p>
+      </section>
+
+      </div>
+      <div class="subpanel" id="subPanBulk">
+      <section>
+        <h2>Which channels</h2>
+        <p style="margin:0 0 10px">
+          <label class="legend" title="Act on whichever channel is highlighted in the table instead of a range. Renaming and setting a field across many channels are hidden while this is on, because the side panel and the table already do those for a single channel." style="display:flex;align-items:center;gap:6px;cursor:help">
+            <input type="checkbox" id="chkSelOnly" checked> Use the selected channel only
+            <span id="selOnlyWho" class="small"></span>
+          </label>
+        </p>
+        <div class="grid2" id="bulkRangeBoxes">
+          <div class="f" title="First channel the operations below act on, using the numbers shown in the table.">
+            <label for="bFrom">First channel</label><input id="bFrom" value="1"></div>
+          <div class="f" title="Last channel in the range. The range includes both ends.">
+            <label for="bTo">Last channel</label><input id="bTo" value="200"></div>
+        </div>
+        <p class="hint">Everything on this tab changes only the codeplug in front
+        of you. Nothing reaches the radio until you write it.</p>
+      </section>
+
+      <section id="secBulkField">
+        <h2>Set one thing on all of them</h2>
+        <div class="grid2">
+          <div class="f" title="Which field to change. Channels not in use are left alone.">
+            <label for="bField">Setting</label><select id="bField"></select></div>
+          <div class="f" title="The value written to every channel in the range.">
+            <label for="bValue">New value</label><select id="bValue"></select></div>
+        </div>
+        <div class="rowbtns">
+          <button class="btn" id="btnBulkApply" title="Writes the chosen setting to every channel in the range that is in use. Empty channels are skipped.">Apply to range</button>
+        </div>
+        <p class="hint">Useful for putting a whole block of repeaters on narrow
+        bandwidth, or setting one power level across an imported list.</p>
+      </section>
+
+      <section id="secBulkRename">
+        <h2>Rename</h2>
+        <div class="grid2">
+          <div class="f wide" title="Text to look for inside channel names. Leave this blank to replace the whole name instead of part of it.">
+            <label for="bFind">Find this text</label>
+            <input id="bFind" placeholder="blank = replace the whole name"></div>
+          <div class="f wide" title="What the matched text becomes. Leave blank to delete the text you searched for.">
+            <label for="bRepl">Change it to</label><input id="bRepl"></div>
+        </div>
+        <div class="rowbtns">
+          <button class="btn" id="btnRename" title="Applies the rename to every channel in the range that is in use. Names are cut to 16 characters.">Rename in range</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Move, copy or delete</h2>
+        <div class="grid2">
+          <div class="f" title="Where a copy or move lands. The range is written starting at this channel.">
+            <label for="bDest">Land at channel</label><input id="bDest" value="101"></div>
+        </div>
+        <div class="rowbtns">
+          <button class="btn" id="btnCopyRange" title="Copies the channels in the range to the destination, leaving the originals in place. Empty slots in the range are skipped, not copied over the destination.">Copy there</button>
+          <button class="btn" id="btnMoveRange" title="Copies the channels in the range to the destination, then clears the originals. Empty slots in the range are left alone at both ends.">Move there</button>
+          <button class="btn" id="btnDeleteRange" title="Clears every channel in the range. You are asked to confirm first.">Delete range</button>
+          <button class="btn" id="btnCompact" title="Packs every channel in use down so they run from 1 with no empty slots between them. Order is kept.">Remove gaps</button>
+        </div>
+      </section>
+      </div>
+
+      <div class="subpanel" id="subPanChecks">
+      <section>
+        <h2>Checks</h2>
+        <div class="rowbtns"><button class="btn" id="btnCheck" disabled>Run checks</button></div>
+        <div id="issues"><p class="hint">Checks look for out-of-band frequencies,
+        duplicates, and frequencies that do not sit on their own tuning step.</p></div>
+      </section>
+      </div>
+    </div>
+
+    <div class="tabpanel" id="panSettings">
+      <section>
+        <div id="setFields"></div>
+        <p class="hint">Hover any setting for what it does. Every field here was
+        confirmed by comparing real saves from the manufacturer&rsquo;s software
+        against a radio; bytes nobody has mapped are never written, and neither is
+        any bit outside a named field. Labels marked * are shortened &mdash; hover
+        for the manufacturer&rsquo;s full wording.</p>
+      </section>
+      <section>
+        <h2>Band limits</h2>
+        <p class="hint" id="bandHint">Load a codeplug to see the band limits.</p>
+      </section>
+    </div>
+
+    <div class="tabpanel" id="panVfo">
+      <div class="subtabs" role="tablist">
+        <button role="tab" id="subVfoA" aria-selected="true" data-sub="subPanVfoA">VFO A (left)</button>
+        <button role="tab" id="subVfoB" aria-selected="false" data-sub="subPanVfoB">VFO B (right)</button>
+      </div>
+      <div class="subpanel on" id="subPanVfoA"><section><div id="vfoFieldsA"></div></section></div>
+      <div class="subpanel" id="subPanVfoB"><section><div id="vfoFieldsB"></div></section></div>
+      <section>
+        <p class="hint">The two VFOs are the frequencies each side of the
+        display falls back to when you leave the memory channels. They live in
+        their own records past the 200 channels, have no names, and never
+        appear when you scroll.</p>
+        <p class="hint">This radio also carries a 220&nbsp;MHz slot for each
+        VFO, inherited from a tri-band sibling. It has no such band, so those
+        two are left exactly as they are.</p>
+      </section>
+    </div>
+
+    <div class="tabpanel" id="panFm">
+      <section>
+        <h2>FM broadcast presets</h2>
+        <div class="fields">
+          <div class="f wide" title="The frequency the FM broadcast receiver tunes to when it is not on a stored preset. In MHz, for example 101.70."><label for="fmVfo">VFO (MHz)</label><input id="fmVfo" disabled></div>
+        </div>
+        <h3 class="subhead">Presets</h3>
+        <div class="fmlist" id="fmList"></div>
+        <p class="hint">Thirty-two stored FM broadcast stations, in MHz. Tick a
+        preset to mark it in use; blank the frequency to store nothing in that
+        slot. The per-preset tick boxes are the one part of this block that was
+        inferred rather than confirmed against a radio.</p>
+      </section>
+    </div>
+
+    <div class="tabpanel" id="panOptions">
+      <section>
+        <h2>Appearance</h2>
+        <div class="fields">
+          <div class="f" title="Auto follows whatever your system is set to.">
+            <label for="selTheme">Theme</label>
+            <select id="selTheme">
+              <option value="auto">Auto</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+        </div>
+        <p class="hint">Your choice, the panel width and the transfer options
+        below are remembered on this computer. Codeplugs never are &mdash; a stale
+        one reappearing after a refresh is exactly how the wrong thing gets
+        written to a radio.</p>
+      </section>
+
+      <section>
+        <h2>When talking to the radio</h2>
+        <div class="rowbtns" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <label class="legend" title="After writing, read the whole codeplug back and compare it byte for byte. Catches a block that was accepted but stored wrongly. Adds one extra read to every write." style="display:flex;align-items:center;gap:6px;cursor:help">
+            <input type="checkbox" id="chkVerify" checked> Verify after write
+          </label>
+          <label class="legend" title="Before writing, read the radio and show exactly what would change. Nothing is sent until you confirm. If nothing differs, the write is skipped." style="display:flex;align-items:center;gap:6px;cursor:help">
+            <input type="checkbox" id="chkCompare" checked> Compare before write
+          </label>
+          <label class="legend" title="Every successful read quietly saves a timestamped .icf, so the original is kept without you having to remember." style="display:flex;align-items:center;gap:6px;cursor:help">
+            <input type="checkbox" id="chkAutoBackup" checked> Auto-backup on read
+          </label>
+          <label class="legend" title="Switches to the older frame format used elsewhere in this radio family. Same commands, different framing. Try this if the handshake fails." style="display:flex;align-items:center;gap:6px;cursor:help">
+            <input type="checkbox" id="chkLegacy"> Legacy framing
+          </label>
+        </div>
+        <p class="hint">Verification reads the codeplug back after writing and
+        compares it byte for byte. Comparing first shows you what would change
+        before anything is sent. Legacy framing is for units that use the older
+        frame format.</p>
+      </section>
+
+      <section class="log">
+        <h2 title="Every frame sent to and received from the radio, in hex. TX is what this page sent, RX what came back. Useful when a transfer fails.">Serial traffic</h2>
+        <pre id="log">Nothing sent yet.</pre>
+      </section>
+    </div>
+      </div>
+
+    <details class="about">
+        <summary>About this tool</summary>
+        <p id="support"></p>
+        <p>The protocol here was recovered by reading the manufacturer's own
+        programming software rather than from a captured session. Read your radio
+        and save that file before you write anything &mdash; it is your way back.</p>
+        <p>The radio speaks USB directly &mdash; its microcontroller presents a
+        virtual COM port &mdash; so the baud rate is not something worth adjusting
+        if a transfer misbehaves.</p>
+        <p>If the handshake fails, try <em>Legacy framing</em>: this radio family
+        appears to use two different frame formats with identical commands.</p>
+        <p>Inverted DCS is the one field known to be uncertain. If polarity comes
+        out backwards, the encode and decode inversion bits need swapping.</p>
+      </details>
+  </aside>
+</main>
+
+<footer class="status" id="status">
+  <span class="msg" id="msg">Open a .icf file to look around, or connect a radio and read it.</span>
+  <span class="legend" id="dirty"></span>
+  <button class="btn" id="btnViewChanges" hidden>View changes</button>
+</footer>
+
+<input type="file" class="file" id="file" accept=".icf,.img,.bin,.dat">
+<input type="file" class="file" id="fileCsv" accept=".csv,.txt">
+<input type="file" class="file" id="fileCmp" accept=".icf,.img,.bin,.dat">
+
+<div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <h2 id="modalTitle">Review</h2>
+    <div class="body" id="modalBody"></div>
+    <div class="foot">
+      <button class="btn" id="modalCancel">Cancel</button>
+      <button class="btn write" id="modalOk">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script src="th2000-core.js"></script>
+<script>
+'use strict';
+/* Tolerates being called after the page has gone: async work can outlive it. */
+const $ = (id) => (typeof document === 'undefined' || !document)
+  ? null : document.getElementById(id);
+
+/* th2000-core.js carries all the protocol and codeplug knowledge. If it did
+   not load, say so plainly instead of letting every later call fail with
+   "cannot read properties of undefined". */
+const T = window.TH2000;
+if (!T) {
+  document.querySelector('main').before(Object.assign(
+    document.createElement('p'), {
+      className: 'unsupported',
+      innerHTML: '<b>th2000-core.js did not load.</b> The page needs it in the '
+        + 'same folder as index.html, spelled exactly <code>th2000-core.js</code>. '
+        + 'Check for a 404 in the browser console, and that your download did '
+        + 'not rename it to <code>th2000-core.js.txt</code>. '
+        + 'The single-file build <code>th2000-standalone.html</code> avoids this '
+        + 'entirely.'
+    }));
+  ['btnConnect', 'btnRead', 'btnWrite', 'btnOpen', 'btnSaveIcf']
+    .forEach((b) => { const el = $(b); if (el) el.disabled = true; });
+  $('msg').textContent = 'Cannot start: th2000-core.js is missing.';
+  $('status').className = 'status bad';
+  throw new Error('th2000-core.js not loaded');
+}
+
+// ----------------------------------------------------------------- storage
+/* Preferences only. Never a codeplug: one reappearing quietly after a refresh
+   is how the wrong thing ends up on a radio. Any failure - private browsing, a
+   sandboxed viewer, storage disabled - falls back to this session only. */
+const store = {
+  ok: true,
+  get(key, fallback) {
+    try {
+      const v = window.localStorage.getItem('th2000.' + key);
+      return v === null ? fallback : JSON.parse(v);
+    } catch (e) { store.ok = false; return fallback; }
+  },
+  set(key, value) {
+    try { window.localStorage.setItem('th2000.' + key, JSON.stringify(value)); }
+    catch (e) { store.ok = false; }
+  }
+};
+
+// ------------------------------------------------------------------- state
+const S = {
+  port: null, reader: null, writer: null,
+  buf: new Uint8Array(0),
+  cp: null,             // Codeplug being edited
+  loaded: false,        // a file or a radio has supplied a codeplug
+  docName: null,        // what to call it in the tab title
+  baseline: null,       // the image as last read from the radio
+  writeAllowed: false,  // only after a radio read or a file open
+  sel: 0,               // selected channel index
+  dirty: false,         // edited since last load or save
+  savedThisSession: false,
+  busy: false,
+  header: null          // .icf header lines, preserved on save
+};
+
+const legacy = () => $('chkLegacy').checked;
+
+// -------------------------------------------------------------- messaging
+function say(text, kind) {
+  // Async work can finish after the page has gone - a tab closed mid-transfer,
+  // or a dialogue resolving during teardown. There is nowhere to say it then.
+  const msg = $('msg');
+  if (!msg) return;
+  msg.textContent = text;
+  $('status').className = 'status' + (kind ? ' ' + kind : '');
+}
+function logLine(html) {
+  const pre = $('log');
+  if (pre.dataset.empty !== '0') { pre.textContent = ''; pre.dataset.empty = '0'; }
+  const atBottom = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4;
+  pre.insertAdjacentHTML('beforeend', html + '\n');
+  while (pre.childNodes.length > 400) pre.removeChild(pre.firstChild);
+  if (atBottom) pre.scrollTop = pre.scrollHeight;
+}
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const logTx = (b) => logLine('<b>TX</b> ' + esc(T.hex(b, 20)));
+const logRx = (b) => logLine('<i>RX</i> ' + esc(T.hex(b, 20)));
+const logNote = (s) => logLine('<s>' + esc(s) + '</s>');
+
+function setLamp(cls, text) {
+  $('lamp').className = 'lamp' + (cls ? ' ' + cls : '');
+  $('linkText').textContent = text;
+}
+/* The tab title. Useful with several of these open, and the leading dot is the
+   usual convention for unsaved work. */
+const APP_TITLE = 'TH-2000 codeplug';
+function renderTitle() {
+  const what = S.docName || (S.cp ? 'New codeplug' : null);
+  document.title = (S.dirty ? '\u2022 ' : '')
+    + (what ? what + ' \u2014 ' + APP_TITLE : APP_TITLE);
+}
+
+function markDirty(on) {
+  S.dirty = on;
+  $('dirty').textContent = on ? 'Unsaved changes' : (S.cp && !S.savedThisSession ? 'No backup saved' : '');
+  $('dirty').style.color = on ? 'var(--warn)' : 'var(--ink-3)';
+  $('btnViewChanges').hidden = !(on && S.baseline);
+  renderTitle();
+}
+
+/* What has been edited since this codeplug was read or opened. */
+$('btnViewChanges').onclick = async () => {
+  if (!S.cp || !S.baseline) return;
+  const base = new T.Codeplug(S.baseline);
+  const d = T.diffCodeplugs(base, S.cp);
+  await showModal('Unsaved changes',
+    (d.bytes
+      ? renderDiffDirection('As loaded', 'Current state')
+        + renderDiffBody(d)
+        + renderDiffSummary(d)
+      : '<p class="muted">Nothing has changed since it was loaded.</p>')
+    + renderBitSection(base, S.cp),
+    { ok: null, cancel: 'Close' });
+};
+
+// ---------------------------------------------------------------- support
+if (!('serial' in navigator)) {
+  const p = document.createElement('p');
+  p.className = 'unsupported';
+  p.innerHTML = 'This browser cannot reach serial ports, so the radio buttons '
+    + 'are switched off. File editing still works. Web Serial needs a '
+    + 'Chromium browser (Chrome, Edge) on desktop, and the page must come from '
+    + '<code>https</code> or <code>localhost</code> &mdash; opening the file '
+    + 'directly will not do. From this folder run '
+    + '<code>python3 -m http.server 8000</code> and visit '
+    + '<code>http://localhost:8000</code>.';
+  document.querySelector('main').before(p);
+  $('btnConnect').disabled = true;
+  $('support').textContent = 'Serial access is unavailable in this browser.';
+} else {
+  $('support').textContent = 'Serial access is available. The radio talks at '
+    + '57600 baud, 8N1, with RTS and DTR asserted.';
+}
+
+// ------------------------------------------------------------------- link
+async function connect() {
+  try {
+    S.port = await navigator.serial.requestPort();
+    await S.port.open({ baudRate: 57600, dataBits: 8, stopBits: 1, parity: 'none', bufferSize: 8192 });
+    try { await S.port.setSignals({ dataTerminalReady: true, requestToSend: true }); }
+    catch (e) { logNote('This platform would not let us set RTS/DTR; continuing.'); }
+    S.reader = S.port.readable.getReader();
+    S.writer = S.port.writable.getWriter();
+    S.buf = new Uint8Array(0);
+    pump();
+    setLamp('on', 'Connected');
+    $('btnRead').disabled = false;
+    $('btnWrite').disabled = !S.writeAllowed;
+    $('btnConnect').textContent = 'Disconnect';
+    say('Port open. Turn the radio on with the cable seated, then read it.', 'good');
+  } catch (e) {
+    if (e && e.name === 'NotFoundError') { say('No port chosen.'); return; }
+    setLamp('err', 'Port error');
+    say('Could not open the port: ' + e.message + '. Close any other program using it and try again.', 'bad');
+  }
+}
+
+async function disconnect() {
+  try { if (S.reader) { await S.reader.cancel().catch(() => {}); S.reader.releaseLock(); } } catch (e) {}
+  try { if (S.writer) S.writer.releaseLock(); } catch (e) {}
+  try { if (S.port) await S.port.close(); } catch (e) {}
+  S.port = S.reader = S.writer = null;
+  setLamp('', 'Not connected');
+  $('btnRead').disabled = true;
+  $('btnWrite').disabled = true;
+  $('btnConnect').textContent = 'Connect';
+  say('Port closed.');
+}
+
+async function pump() {
+  try {
+    for (;;) {
+      const { value, done } = await S.reader.read();
+      if (done) break;
+      if (value && value.length) {
+        const next = new Uint8Array(S.buf.length + value.length);
+        next.set(S.buf); next.set(value, S.buf.length);
+        S.buf = next;
+      }
+    }
+  } catch (e) {
+    if (S.port) { setLamp('err', 'Link lost'); say('The serial link dropped: ' + e.message, 'bad'); }
+  }
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function send(op, payload) {
+  const frame = T.buildFrame(op, payload || [], legacy());
+  logTx(frame);
+  await S.writer.write(frame);
+}
+
+/* Wait for one complete frame. In stuffed mode 0xFD cannot occur inside the
+   body, so the first one ends the frame. In legacy mode it can, so the caller
+   passes the exact length it expects. */
+async function recv(expectLen, timeoutMs) {
+  const deadline = Date.now() + (timeoutMs || 3000);
+  for (;;) {
+    if (expectLen && S.buf.length >= expectLen) return take(expectLen);
+    if (!expectLen) {
+      for (let i = 5; i < S.buf.length; i++) if (S.buf[i] === T.END) return take(i + 1);
+    }
+    if (Date.now() > deadline) {
+      const seen = S.buf.length ? ' Saw ' + T.hex(S.buf, 12) + '.' : ' Nothing arrived.';
+      S.buf = new Uint8Array(0);
+      throw new Error('The radio did not answer in time.' + seen
+        + ' Check the cable, the port, and that the radio is on.');
+    }
+    await sleep(12);
+  }
+}
+function take(n) {
+  const frame = S.buf.slice(0, n);
+  S.buf = S.buf.slice(n);
+  logRx(frame);
+  return T.parseFrame(frame, legacy());
+}
+
+async function expect(op, expectLen, timeoutMs) {
+  const r = await recv(expectLen, timeoutMs);
+  if (r.opcode !== op) {
+    throw new Error('The radio replied with command ' + T.hx(r.opcode)
+      + ' where ' + T.hx(op) + ' was expected. If this repeats, try Legacy framing.');
+  }
+  return r.payload;
+}
+
+// ---------------------------------------------------------------- session
+// Only data blocks need a fixed expected length: in legacy framing their
+// payload can legitimately contain 0xFD, so the terminator cannot be trusted.
+// Handshake and ack frames are short and 0xFD-free, so those are scanned.
+const dataLen = (n) => 5 + 4 + 2 + n + 1 + 1;
+
+async function handshake() {
+  await send(T.OP.HANDSHAKE, T.MODEL_ID);
+  const id = await expect(T.OP.HANDSHAKE_ACK, 0, 4000);
+  logNote('Radio identified: ' + T.hex(id));
+  return id;
+}
+async function enterMode(op) {
+  await send(op, [...T.be32(0), ...T.be32(T.MEM_SIZE)]);
+  await expect(T.OP.ACK, 0);
+}
+async function endSession() {
+  try { await send(T.OP.END, T.MODEL_ID); await recv(0, 900); }
+  catch (e) { logNote('No clean end-of-session reply; the radio usually just drops the link.'); }
+}
+
+function meterInit() {
+  const segs = $('segs'); segs.innerHTML = '';
+  T.blockPlan().forEach((b) => {
+    const d = document.createElement('div');
+    d.className = 'seg';
+    d.title = 'Block at 0x' + b.addr.toString(16).toUpperCase().padStart(4, '0') + ', ' + b.len + ' bytes';
+    segs.appendChild(d);
+  });
+}
+function meterMark(i, cls) {
+  const el = $('segs').children[i];
+  if (el) el.className = 'seg ' + cls;
+}
+function meterText(s) { $('meterText').textContent = s; }
+function meterFail(from) {
+  for (let i = from; i < $('segs').children.length; i++) meterMark(i, 'err');
+}
+
+/* One read session: handshake, enter read, 22 blocks, end. Returns the bytes. */
+async function sessionRead(meterCls) {
+  meterInit(); meterText('0 / 22');
+  await handshake();
+  await enterMode(T.OP.ENTER_READ);
+  const out = new Uint8Array(T.MEM_SIZE);
+  const plan = T.blockPlan();
+  for (let i = 0; i < plan.length; i++) {
+    const b = plan[i];
+    meterMark(i, 'active');
+    await send(T.OP.READ_BLOCK, [...T.be32(b.addr), ...T.be16(b.len)]);
+    let payload;
+    try { payload = await expect(T.OP.DATA, legacy() ? dataLen(b.len) : 0); }
+    catch (e) { meterFail(i); throw e; }
+    const addr = (payload[0] << 24 | payload[1] << 16 | payload[2] << 8 | payload[3]) >>> 0;
+    const len = payload[4] << 8 | payload[5];
+    if (addr !== b.addr || len !== b.len) {
+      meterFail(i);
+      throw new Error('The radio sent block 0x' + addr.toString(16) + '/' + len
+        + ' when 0x' + b.addr.toString(16) + '/' + b.len + ' was requested.');
+    }
+    out.set(payload.subarray(6, 6 + len), addr);
+    meterMark(i, meterCls || 'done');
+    meterText((i + 1) + ' / ' + plan.length);
+  }
+  await endSession();
+  return out;
+}
+
+async function sessionWrite(data) {
+  meterInit(); meterText('0 / 22');
+  await handshake();
+  await enterMode(T.OP.ENTER_WRITE);
+  const plan = T.blockPlan();
+  for (let i = 0; i < plan.length; i++) {
+    const b = plan[i];
+    meterMark(i, 'active');
+    await send(T.OP.DATA, [...T.be32(b.addr), ...T.be16(b.len),
+      ...data.subarray(b.addr, b.addr + b.len)]);
+    try { await expect(T.OP.ACK, 0, 4000); }
+    catch (e) {
+      meterFail(i);
+      throw new Error('Block 0x' + b.addr.toString(16).toUpperCase()
+        + ' was not acknowledged. The radio may now hold a partial codeplug'
+        + ' - write a known-good file before using it. (' + e.message + ')');
+    }
+    meterMark(i, 'done tx');
+    meterText((i + 1) + ' / ' + plan.length);
+  }
+  await endSession();
+}
+
+async function readRadio() {
+  await withBusy('busy-rx', 'Reading', async () => {
+    const out = await sessionRead('done');
+    loadBytes(out, null, 'radio');
+    S.baseline = out.slice();
+    S.savedThisSession = false;
+    markDirty(false);
+    let extra = '';
+    if ($('chkAutoBackup').checked) {
+      const name = 'th2000-backup-' + stamp() + '.icf';
+      download(name, new Blob([T.icfSerialize(S.cp.data, null)], { type: 'text/plain' }));
+      extra = ' Saved a backup as ' + name + '.';
+    }
+    say('Read ' + T.MEM_SIZE + ' bytes.' + (extra || ' Save this as a backup before you change anything.'), 'good');
+  });
+}
+
+const CANCELLED = Symbol('cancelled');
+
+async function writeRadio() {
+  if (!S.cp) return;
+  await withBusy('busy-tx', 'Writing', async () => {
+    // 1. checks that do not need the radio
+    const issues = T.validate(S.cp);
+    // 2. a baseline to compare against, read fresh from the radio
+    let baseline = null;
+    if ($('chkCompare').checked) {
+      say('Reading the radio so the changes can be reviewed first.');
+      baseline = new T.Codeplug(await sessionRead('done'));
+      await sleep(200);
+    } else if (S.baseline) {
+      baseline = new T.Codeplug(S.baseline);
+    }
+    const diff = baseline ? T.diffCodeplugs(baseline, S.cp) : null;
+
+    if (diff && diff.bytes === 0) {
+      await showModal('Nothing to write',
+        '<p>The radio already holds exactly this codeplug. Nothing would change.</p>',
+        { ok: null, cancel: 'Close' });
+      say('No differences - write skipped.');
+      throw CANCELLED;
+    }
+
+    const ok = await showModal('Review before writing',
+      renderPreWrite(diff, issues, baseline),
+      { ok: 'Write to radio', cancel: 'Cancel' });
+    if (!ok) { say('Write cancelled. Nothing was sent.'); throw CANCELLED; }
+
+    await sessionWrite(S.cp.data);
+
+    if ($('chkVerify').checked) {
+      meterText('verifying');
+      logNote('Reading the radio back to compare.');
+      await sleep(300);
+      const back = await sessionRead('done');
+      let bad = -1;
+      for (let i = 0; i < T.MEM_SIZE; i++) if (back[i] !== S.cp.data[i]) { bad = i; break; }
+      if (bad >= 0) {
+        throw new Error('Verify failed: byte 0x' + bad.toString(16).toUpperCase()
+          + ' reads back as ' + T.hx(back[bad]) + ', not ' + T.hx(S.cp.data[bad]) + '.');
+      }
+      S.baseline = S.cp.data.slice();
+      meterText('verified');
+      say('Wrote and verified ' + T.MEM_SIZE + ' bytes.', 'good');
+    } else {
+      S.baseline = S.cp.data.slice();
+      say('Wrote ' + T.MEM_SIZE + ' bytes. Verification was switched off.', 'good');
+    }
+  });
+}
+
+async function withBusy(lampCls, label, fn) {
+  if (S.busy) return;
+  S.busy = true;
+  const buttons = ['btnConnect', 'btnRead', 'btnWrite', 'btnOpen'];
+  const prev = buttons.map((b) => $(b).disabled);
+  buttons.forEach((b) => { $(b).disabled = true; });
+  setLamp(lampCls, label + '\u2026');
+  say(label + ' \u2014 leave the cable alone.');
+  try {
+    await fn();
+    setLamp('on', 'Connected');
+  } catch (e) {
+    if (e === CANCELLED) {
+      setLamp('on', 'Connected');
+      meterText('idle');
+      try { await endSession(); } catch (_) {}
+    } else {
+      setLamp('err', label + ' failed');
+      meterText('failed');
+      say(e.message, 'bad');
+      logNote('Stopped: ' + e.message);
+      try { await endSession(); } catch (_) {}
+    }
+  } finally {
+    buttons.forEach((b, i) => { $(b).disabled = prev[i]; });
+    if (S.port) { $('btnRead').disabled = false; $('btnWrite').disabled = !S.writeAllowed; }
+    S.busy = false;
+  }
+}
+
+// ------------------------------------------------------------------- files
+function loadBytes(bytes, header, origin, name) {
+  S.cp = new T.Codeplug(bytes);
+  S.header = header;
+  S.loaded = true;
+  S.docName = name || (origin === 'radio' ? 'Read from radio' : 'Opened file');
+  S.baseline = S.cp.data.slice();
+  S.sel = 0;
+  S.writeAllowed = true;
+  renderAll();
+  if (S.port) $('btnWrite').disabled = false;
+  markDirty(false);
+  if (origin !== 'radio') S.savedThisSession = true;
+}
+
+/* An empty codeplug so the grid shows 200 free channels from the outset. You
+   can build one from scratch and save it; writing to a radio still requires a
+   codeplug that came from a radio or a file, because a blank image has no band
+   limits or calibration context of its own. */
+function startEmpty() {
+  S.cp = new T.Codeplug(new Uint8Array(T.MEM_SIZE));
+  S.header = null;
+  S.loaded = false;
+  S.docName = null;
+  S.writeAllowed = false;
+  S.savedThisSession = true;
+  renderAll();
+  $('btnSaveIcf').disabled = false;
+  markDirty(false);
+}
+
+$('btnOpen').onclick = () => $('file').click();
+$('file').onchange = async (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  try {
+    const buf = new Uint8Array(await f.arrayBuffer());
+    const looksText = /\.icf$/i.test(f.name) || (buf.length > 6 && buf[0] === 0x43 /* C */);
+    if (looksText) {
+      let text = '';
+      for (const b of buf) text += String.fromCharCode(b);   // latin-1
+      const p = T.icfParse(text);
+      if (p.coverage > T.MEM_SIZE) {
+        logNote(f.name + ' covers 0x' + p.coverage.toString(16).toUpperCase()
+          + ' bytes; using the first 0x' + T.MEM_SIZE.toString(16).toUpperCase() + '.');
+      }
+      loadBytes(p.bytes, p.header, 'file', f.name);
+      say('Opened ' + f.name + ' \u2014 ' + p.records + ' records, '
+        + S.cp.channels().filter((c) => c.used).length + ' channels in use.', 'good');
+    } else {
+      if (buf.length < T.MEM_SIZE) throw new Error('this file is only ' + buf.length
+        + ' bytes; a codeplug is ' + T.MEM_SIZE);
+      if (buf.length > T.MEM_SIZE) {
+        logNote('Ignoring ' + (buf.length - T.MEM_SIZE) + ' trailing bytes (CHIRP appends a metadata block).');
+      }
+      loadBytes(buf.subarray(0, T.MEM_SIZE), null, 'file', f.name);
+      say('Opened ' + f.name + ' as a raw image.', 'good');
+    }
+  } catch (e) {
+    say('Could not read ' + f.name + ': ' + e.message, 'bad');
+  }
+  ev.target.value = '';
+};
+
+function download(name, blob) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  S.savedThisSession = true;
+  markDirty(false);
+}
+const stamp = () => new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+$('btnSaveIcf').onclick = () => {
+  const text = T.icfSerialize(S.cp.data, S.header);
+  download('th2000-' + stamp() + '.icf', new Blob([text], { type: 'text/plain' }));
+  say('Saved .icf. The manufacturer software will open this.', 'good');
+};
+// -------------------------------------------------------------------- grid
+/* All of these come from the core so there is exactly one definition. The page
+   used to keep its own copy of the rx-only test, and a formatter that missed it
+   printed 42949.67295 MHz. */
+const mhz = T.mhzText;
+const RX_ONLY = T.RX_ONLY_HZ;
+const isRxOnly = T.isRxOnly;
+
+function shiftLabel(c) {
+  if (isRxOnly(c)) return 'rx only';
+  const d = c.txHz - c.rxHz;
+  if (d === 0) return '\u2014';
+  if (Math.abs(d) > 70e6) return 'split';
+  return (d > 0 ? '+' : '\u2212') + (Math.abs(d) / 1e6).toFixed(3);
+}
+
+function renderRows() {
+  const tb = $('rows');
+  const frag = document.createDocumentFragment();
+  S.cp.channels().forEach((c) => {
+    const tr = document.createElement('tr');
+    tr.tabIndex = -1;
+    if (!c.used) tr.className = 'free';
+    tr.setAttribute('aria-selected', c.index === S.sel ? 'true' : 'false');
+    tr.dataset.i = c.index;
+    const cells = c.used ? [
+      '<span class="dot used"></span>',
+      c.index + 1,
+      esc(c.name) || '<span class="small">unnamed</span>',
+      c.rxHz ? mhz(c.rxHz) : '<span class="small">not set</span>',
+      c.txHz === T.RX_ONLY_HZ ? '<span class="small">off</span>'
+        : (c.txHz ? mhz(c.txHz) : '<span class="small">not set</span>'),
+      shiftLabel(c),
+      esc(T.toneLabel(c.txTone, c.txInv)),
+      esc(T.toneLabel(c.rxTone, c.rxInv)),
+      T.POWER[c.power] || '?',
+      T.BANDWIDTH[c.bandwidth] || '?',
+      (T.STEPS_KHZ[c.step] !== undefined ? T.STEPS_KHZ[c.step] : '?'),
+      c.skip ? '<b class="skipped">skip</b>' : '<span class="small">include</span>',
+      '<button class="rowdel" data-del="' + c.index + '" title="Clear channel '
+        + (c.index + 1) + '. Only changes the codeplug in front of you.">&times;</button>'
+    ] : ['<span class="dot"></span>', c.index + 1, '<span class="small">free</span>',
+      '', '', '', '', '', '', '', '', '', ''];
+    cells.forEach((v, i) => {
+      const td = document.createElement('td');
+      if (i === 1) td.className = 'num';
+      else if (i === 3 || i === 4) td.className = 'freq';
+      else if (i === 12) td.className = 'delcell';
+      else if (i >= 5) td.className = 'small';
+      td.innerHTML = v === '' ? '' : String(v);
+      tr.appendChild(td);
+    });
+    frag.appendChild(tr);
+  });
+  tb.replaceChildren(frag);
+}
+
+$('rows').addEventListener('click', (e) => {
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    // No confirmation, to match the Clear channel button beside it: this only
+    // edits the codeplug in front of you, it shows up under View changes, and
+    // nothing reaches the radio until you write.
+    const i = +del.dataset.del;
+    S.cp.clearChannel(i);
+    renderRows(); renderPlate(); renderEditor(); markDirty(true);
+    say('Channel ' + (i + 1) + ' cleared. View changes will show it.');
+    e.stopPropagation();
+    return;
+  }
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  select(+tr.dataset.i);
+});
+/* Keyboard on the channel list. Held in the page rather than the system
+   clipboard so a paste always puts back exactly the channel that was copied;
+   the copy is also offered to the system clipboard as a CSV row, which is a
+   convenience and never a requirement. */
+S.clip = null;
+
+function copySelected(cut) {
+  const c = S.cp.getChannel(S.sel);
+  if (!c.used) { say('Channel ' + (S.sel + 1) + ' is empty, so there is nothing to copy.'); return; }
+  S.clip = Object.assign({}, c);
+  try {
+    const one = new T.Codeplug(new Uint8Array(T.MEM_SIZE));
+    one.setChannel(Object.assign({}, c, { index: 0 }));
+    const row = T.csvSerialize(one).split('\r\n')[1];
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(row).catch(() => {});
+    }
+  } catch (e) { /* the in-page copy is what matters */ }
+  if (cut) {
+    S.cp.clearChannel(S.sel);
+    renderRows(); renderPlate(); renderEditor(); markDirty(true);
+    say('Cut channel ' + (S.sel + 1) + '. Select a row and press Ctrl+V to place it.');
+  } else {
+    say('Copied channel ' + (S.sel + 1) + '. Select a row and press Ctrl+V to place it.');
+  }
+}
+
+function pasteSelected() {
+  if (!S.clip) { say('Nothing has been copied yet. Select a channel and press Ctrl+C.'); return; }
+  S.cp.setChannel(Object.assign({}, S.clip, { index: S.sel, used: true }));
+  renderRows(); renderPlate(); renderEditor(); markDirty(true);
+  say('Pasted into channel ' + (S.sel + 1) + '.');
+}
+
+function deleteSelected() {
+  if (!S.cp.getChannel(S.sel).used) { say('Channel ' + (S.sel + 1) + ' is already empty.'); return; }
+  S.cp.clearChannel(S.sel);
+  renderRows(); renderPlate(); renderEditor(); markDirty(true);
+  say('Channel ' + (S.sel + 1) + ' cleared. View changes will show it.');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (!S.cp) return;
+  // a keydown can arrive with the document itself as the target, which has no
+  // matches(), so check before calling it
+  const t = e.target;
+  if (t && t.matches && t.matches('input,select,textarea')) return;
+  if ($('scrim').classList.contains('on')) return;         // a dialogue is open
+  if (e.altKey) return;
+
+  if (e.key === 'ArrowDown') { select(Math.min(T.CHAN_NUM - 1, S.sel + 1)); e.preventDefault(); return; }
+  if (e.key === 'ArrowUp') { select(Math.max(0, S.sel - 1)); e.preventDefault(); return; }
+
+  const cmd = e.ctrlKey || e.metaKey;
+  /* e.key is the character the layout produces, so on a Cyrillic layout Ctrl+C
+     arrives as "\u0441" and never matched. e.code is the physical key, which
+     does not move - except under Dvorak and friends, where the letter moves but
+     the character is right. Accepting either covers both. */
+  const k = (e.key || '').toLowerCase();
+  const code = e.code || '';
+  const isLetter = (c) => code === 'Key' + c.toUpperCase() || k === c;
+  if (cmd && isLetter('c')) {
+    // if there is a text selection, the browser's own copy is what was wanted
+    let sel = '';
+    try { sel = String(window.getSelection() || ''); } catch (_) {}
+    if (sel.trim()) return;
+    copySelected(false); e.preventDefault();
+  } else if (cmd && isLetter('x')) { copySelected(true); e.preventDefault(); }
+  else if (cmd && isLetter('v')) { pasteSelected(); e.preventDefault(); }
+  else if (e.key === 'Delete') { deleteSelected(); e.preventDefault(); }
+});
+function select(i) {
+  const prev = $('rows').querySelector('tr[aria-selected="true"]');
+  if (prev) prev.setAttribute('aria-selected', 'false');
+  S.sel = i;
+  const tr = $('rows').children[i];
+  if (tr) {
+    tr.setAttribute('aria-selected', 'true');
+    tr.scrollIntoView({ block: 'nearest' });
+  }
+  renderEditor();
+  if ($('chkSelOnly')) syncSelOnly();
+}
+
+// ------------------------------------------------------------- inline edit
+/* Double-click a cell to edit it in place. The columns match what the table
+   already shows; everything else stays in the side panel, which keeps the two
+   views in step rather than competing. */
+const CELL_EDIT = {
+  2:  { kind: 'text', label: 'name' },
+  3:  { kind: 'mhz', label: 'receive' },
+  4:  { kind: 'mhz', label: 'transmit', allowOff: true },
+  6:  { kind: 'tone', label: 'encode' },
+  7:  { kind: 'tone', label: 'decode' },
+  8:  { kind: 'enum', label: 'power', list: () => T.POWER },
+  9:  { kind: 'enum', label: 'bandwidth', list: () => T.BANDWIDTH },
+  10: { kind: 'enum', label: 'step', list: () => T.STEPS_KHZ.map(String) },
+  11: { kind: 'enum', label: 'scan', list: () => ['Include', 'Skip'] }
+};
+let editing = null;      // { row, col }
+
+const editView = (i) => {
+  const c = S.cp.getChannel(i);
+  return c.used ? c : T.blankChannel(c);
+};
+
+function cellValue(c, col) {
+  switch (col) {
+    case 2: return c.name;
+    case 3: return c.rxHz ? (c.rxHz / 1e6).toFixed(5) : '';
+    case 4:
+      if (c.txHz === T.RX_ONLY_HZ) return 'off';
+      return c.txHz ? T.mhzText(c.txHz) : '';
+    case 6: return T.toneLabel(c.txTone, c.txInv);
+    case 7: return T.toneLabel(c.rxTone, c.rxInv);
+    case 8: return c.power;
+    case 9: return c.bandwidth;
+    case 10: return c.step;
+    case 11: return c.skip ? 1 : 0;
+    default: return '';
+  }
+}
+
+/* Returns an error string, or null when the value was accepted. */
+function applyCell(c, col, raw) {
+  const spec = CELL_EDIT[col];
+  if (col === 2) { c.name = String(raw).slice(0, 16); return null; }
+  if (col === 3 || col === 4) {
+    const txt = String(raw).trim();
+    if (col === 4 && /^off$/i.test(txt)) { c.txHz = RX_ONLY; return null; }
+    if (col === 4 && !txt) { c.txHz = c.rxHz; return null; }
+    const hz = Math.round(parseFloat(txt) * 1e6);
+    if (!txt || !isFinite(hz) || hz <= 0) {
+      return spec.label + ' should look like 145.500'
+        + (col === 4 ? ', or off for a receive-only channel' : '');
+    }
+    if (col === 3) c.rxHz = hz; else c.txHz = hz;
+    return null;
+  }
+  if (col === 6 || col === 7) {
+    const t = T.parseTone(raw);
+    if (!t) return spec.label + ' is not a tone this radio can store';
+    if (col === 6) { c.txTone = t.word; c.txInv = t.inverted; }
+    else { c.rxTone = t.word; c.rxInv = t.inverted; }
+    return null;
+  }
+  const v = +raw;
+  if (col === 8) c.power = v;
+  else if (col === 9) c.bandwidth = v;
+  else if (col === 10) c.step = v;
+  else if (col === 11) c.skip = v === 1;
+  return null;
+}
+
+const nextCol = (col, back) => {
+  const cols = Object.keys(CELL_EDIT).map(Number).sort((a, b) => a - b);
+  const i = cols.indexOf(col);
+  return back ? cols[i - 1] : cols[i + 1];
+};
+
+function startEdit(row, col) {
+  if (!S.cp || !CELL_EDIT[col]) return;
+  const c = editView(row);
+  const tr = $('rows').children[row];
+  if (!tr) return;
+  const td = tr.children[col];
+  if (!td) return;
+  editing = { row, col };
+  select(row);
+
+  const spec = CELL_EDIT[col];
+  const cur = cellValue(c, col);
+  let el;
+  if (spec.kind === 'enum' || spec.kind === 'tone') {
+    el = document.createElement('select');
+    if (spec.kind === 'tone') {
+      let group = null;
+      for (const ch of T.toneChoices()) {
+        if (ch.group !== group) { group = ch.group; }
+        const o = document.createElement('option');
+        o.value = ch.value; o.textContent = ch.label;
+        if (ch.label === cur) o.selected = true;
+        el.appendChild(o);
+      }
+    } else {
+      spec.list().forEach((o, i) => {
+        const opt = document.createElement('option');
+        opt.value = String(i); opt.textContent = o;
+        if (i === +cur) opt.selected = true;
+        el.appendChild(opt);
+      });
+    }
+  } else {
+    el = document.createElement('input');
+    el.value = cur;
+    if (col === 2) el.maxLength = 16;
+  }
+  el.className = 'cellEdit';
+  td.textContent = '';
+  td.appendChild(el);
+  el.focus();
+  if (el.select) el.select();
+
+  let done = false;
+  /* soft = the editor lost focus rather than being committed on purpose. In
+     that case an unreadable value is discarded instead of holding the caret
+     hostage, which is what made clicking another row flicker. */
+  const finish = (commit, move, soft) => {
+    if (done) return;
+    const chan = editView(row);
+    if (commit) {
+      const claiming = !chan.used;
+      const err = applyCell(chan, col, el.value);
+      if (err) {
+        if (!soft) {
+          el.setAttribute('aria-invalid', 'true');
+          say(err, 'bad');
+          el.focus();
+          return;
+        }
+        done = true;
+        editing = null;
+        renderRows();
+        renderEditor();
+        say(err + ' Nothing was changed.');
+        return;
+      }
+      done = true;
+      if (claiming) chan.used = true;
+      S.cp.setChannel(chan);
+      markDirty(true);
+      say('Channel ' + (row + 1) + ' ' + CELL_EDIT[col].label + ' set.'
+        + (chan.used && !chan.rxHz
+            ? ' It has no receive frequency yet, so the checks will flag it.'
+            : ''));
+    } else {
+      done = true;
+    }
+    editing = null;
+    renderRows(); renderPlate();
+    renderEditor();
+    if (move) {
+      const target = move.col !== undefined ? move.col : col;
+      const r = move.row !== undefined ? move.row : row;
+      if (r >= 0 && r < T.CHAN_NUM && target !== undefined) startEdit(r, target);
+    }
+  };
+
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    else if (e.key === 'Enter') { e.preventDefault(); finish(true, { row: row + 1 }); }
+    else if (e.key === 'Tab') {
+      e.preventDefault();
+      const nc = nextCol(col, e.shiftKey);
+      if (nc === undefined) finish(true, { row: row + (e.shiftKey ? -1 : 1), col: e.shiftKey ? 11 : 2 });
+      else finish(true, { col: nc });
+    }
+  });
+  el.addEventListener('blur', () => setTimeout(() => finish(true, null, true), 0));
+  el.addEventListener('change', () => { if (spec.kind !== 'text') finish(true); });
+}
+
+$('rows').addEventListener('dblclick', (e) => {
+  const td = e.target.closest('td');
+  const tr = e.target.closest('tr');
+  if (!td || !tr) return;
+  startEdit(+tr.dataset.i, Array.prototype.indexOf.call(tr.children, td));
+});
+
+// ------------------------------------------------------------------ editor
+const CH_HELP = {
+  fName: 'Up to 16 characters. The radio stores the first six in the channel record and the rest in a separate table.',
+  fRx: 'The frequency you listen on, in MHz, for example 145.500.',
+  fTx: 'The frequency you transmit on, in MHz. Leave blank to match receive, or type off for a receive-only channel.',
+  fEnc: 'Sub-audible tone sent while you transmit, so a repeater or another radio will open for you.',
+  fDec: 'Sub-audible tone that must be present before this channel unmutes. Set it to hear only traffic carrying that code.',
+  fPwr: 'Transmit power for this channel.',
+  fBw: 'Channel spacing. Narrow is 12.5 kHz, Wide 25 kHz. It must match the other station.',
+  fStep: 'Tuning step used when this channel is adjusted from the front panel.',
+  fBusy: 'Refuses to transmit while the channel is occupied. Sub watches for a matching tone, Carrier for any signal.',
+  fSql: 'What must be present before the speaker unmutes: any carrier, a matching tone, signalling, or a combination.',
+  fSig: 'Optional signalling system used on this channel.',
+  fScr: 'Voice scrambler slot. Both ends must use the same number.',
+  fSkip: 'Whether a scan stops on this channel or passes over it.',
+  fDtmf: 'When a DTMF identity is sent: at the start of a transmission, the end, both, or never.',
+  fT5: 'When a 5-tone identity is sent.'
+};
+const SEL = (id, label, opts, value, wide) =>
+  '<div class="f' + (wide ? ' wide' : '') + '" title="' + esc(CH_HELP[id] || '') + '">'
+  + '<label for="' + id + '">' + label + '</label><select id="' + id + '">'
+  + opts.map((o, i) => '<option value="' + i + '"' + (i === value ? ' selected' : '') + '>' + esc(o) + '</option>').join('')
+  + '</select></div>';
+const TXT = (id, label, value, wide, extra) =>
+  '<div class="f' + (wide ? ' wide' : '') + '" title="' + esc(CH_HELP[id] || '') + '">'
+  + '<label for="' + id + '">' + label + '</label>'
+  + '<input id="' + id + '" value="' + esc(value) + '" ' + (extra || '') + '></div>';
+
+/* Encode and decode are pickers, not free text: 260 valid values and no way
+   to mistype one. */
+const TONE_SEL = (id, label, current) => {
+  const choices = T.toneChoices();
+  let html = '', group = null;
+  for (const c of choices) {
+    if (c.group !== group) {
+      if (group) html += '</optgroup>';
+      group = c.group;
+      if (group) html += '<optgroup label="' + esc(group) + '">';
+    }
+    html += '<option value="' + esc(c.value) + '"'
+      + (c.label === current ? ' selected' : '') + '>' + esc(c.label) + '</option>';
+  }
+  if (group) html += '</optgroup>';
+  return '<div class="f" title="' + esc(CH_HELP[id] || '') + '"><label for="' + id + '">'
+    + label + '</label><select id="' + id + '">' + html + '</select></div>';
+};
+
+function renderEditor() {
+  const raw = S.cp.getChannel(S.sel);
+  const c = raw.used ? raw : T.blankChannel(raw);
+  $('chNum').textContent = S.sel + 1;
+  $('editor').innerHTML = '<div class="fields">'
+    + TXT('fName', 'Name (16)', c.name, true, 'maxlength="16"')
+    + TXT('fRx', 'Receive MHz', c.used && c.rxHz ? mhz(c.rxHz) : '')
+    + TXT('fTx', 'Transmit MHz', !c.used || !c.txHz ? ''
+        : (c.txHz === T.RX_ONLY_HZ ? 'off' : mhz(c.txHz)))
+    + TONE_SEL('fEnc', 'Encode', T.toneLabel(c.txTone, c.txInv))
+    + TONE_SEL('fDec', 'Decode', T.toneLabel(c.rxTone, c.rxInv))
+    + SEL('fPwr', 'Power', T.POWER, c.power)
+    + SEL('fBw', 'Bandwidth', T.BANDWIDTH, c.bandwidth)
+    + SEL('fStep', 'Step kHz', T.STEPS_KHZ.map(String), c.step)
+    + SEL('fBusy', 'Busy lock', T.BUSY_LOCK, c.busyLock)
+    + SEL('fSql', 'Squelch mode', T.SQL_MODE, c.sqlMode)
+    + SEL('fSig', 'Signalling', T.SIGNALLING, c.signalling)
+    + SEL('fScr', 'Scrambler', T.SCRAMBLER, c.scrambler)
+    + SEL('fSkip', 'Scan', ['Include', 'Skip'], c.skip ? 1 : 0)
+    + SEL('fDtmf', 'DTMF PTT-ID', T.PTT_ID, c.dtmfPttId)
+    + SEL('fT5', '5-tone PTT-ID', T.PTT_ID, c.tone5PttId)
+    + '</div>';
+  $('chHint').textContent = c.used
+    ? 'Ctrl+C copy, Ctrl+X cut, Ctrl+V paste, Delete clears. Hover any field for what it does.'
+    : 'This channel is free. Enter a receive frequency and apply to claim it.';
+}
+
+$('btnApply').onclick = () => {
+  const existing = S.cp.getChannel(S.sel);
+  const c = existing.used ? existing : T.blankChannel(existing);
+  const bad = (el, why) => { el.setAttribute('aria-invalid', 'true'); say(why, 'bad'); return null; };
+  ['fRx', 'fTx', 'fEnc', 'fDec'].forEach((id) => $(id).removeAttribute('aria-invalid'));
+
+  const rxRaw = $('fRx').value.trim();
+  if (!rxRaw) return bad($('fRx'), 'A receive frequency is required.');
+  const rx = Math.round(parseFloat(rxRaw) * 1e6);
+  if (!isFinite(rx) || rx <= 0) return bad($('fRx'), 'Receive frequency should look like 145.500.');
+  const txRaw = $('fTx').value.trim();
+  const tx = /^off$/i.test(txRaw) ? RX_ONLY : (txRaw ? Math.round(parseFloat(txRaw) * 1e6) : rx);
+  if (!isFinite(tx) || tx <= 0) {
+    return bad($('fTx'), 'Transmit frequency should look like 145.500, or off to disable transmit.');
+  }
+
+  const enc = T.parseTone($('fEnc').value);
+  if (!enc) return bad($('fEnc'), 'Encode should be off, a CTCSS tone like 88.5, or a DCS code like D023.');
+  const dec = T.parseTone($('fDec').value);
+  if (!dec) return bad($('fDec'), 'Decode should be off, a CTCSS tone like 88.5, or a DCS code like D023.');
+
+  const n = (id) => +$(id).value;
+  Object.assign(c, {
+    used: true,
+    name: $('fName').value,
+    rxHz: rx, txHz: tx,
+    txTone: enc.word, txInv: enc.inverted,
+    rxTone: dec.word, rxInv: dec.inverted,
+    power: n('fPwr'), bandwidth: n('fBw'), step: n('fStep'),
+    busyLock: n('fBusy'), sqlMode: n('fSql'), signalling: n('fSig'),
+    scrambler: n('fScr'), skip: n('fSkip') === 1,
+    dtmfPttId: n('fDtmf'), tone5PttId: n('fT5')
+  });
+  S.cp.setChannel(c);
+  renderRows(); renderPlate(); renderEditor(); markDirty(true);
+
+  const outOfBand = !S.cp.inBand(rx) || (tx !== RX_ONLY && !S.cp.inBand(tx));
+  say('Channel ' + (S.sel + 1) + ' updated.'
+    + (outOfBand ? ' Note: that frequency sits outside the band limits stored in this codeplug.' : ''),
+    outOfBand ? '' : 'good');
+};
+
+$('btnClear').onclick = () => {
+  S.cp.clearChannel(S.sel);
+  renderRows(); renderPlate(); renderEditor(); markDirty(true);
+  say('Channel ' + (S.sel + 1) + ' cleared.');
+};
+
+$('btnCopyDown').onclick = () => {
+  if (S.sel >= T.CHAN_NUM - 1) { say('Nothing after channel 200.'); return; }
+  const c = S.cp.getChannel(S.sel);
+  if (!c.used) { say('Channel ' + (S.sel + 1) + ' is empty, so there is nothing to copy.'); return; }
+  const target = S.sel + 1;
+  S.cp.setChannel(Object.assign({}, c, { index: target }));
+  markDirty(true);
+  renderRows();                 // the table does not redraw itself
+  select(target);
+  say('Copied channel ' + (S.sel) + ' into channel ' + (target + 1) + '.');
+};
+
+
+
+/* The second line of the nameplate. Plain capacity until there is something to
+   count, then how much of it is in use. */
+function renderPlate() {
+  const used = S.cp ? S.cp.channels().filter((c) => c.used).length : 0;
+  const count = (S.loaded || used) ? used + ' of ' + T.CHAN_NUM + ' ch'
+                                   : T.CHAN_NUM + ' ch';
+  $('plateLine').textContent = 'codeplug \u00B7 ' + count;
+}
+
+function renderAll() {
+  renderPlate();
+  renderTitle();
+  renderRows();
+  renderEditor();
+  renderSettings();
+  renderVfo();
+  renderFm();
+  $('btnCsvOut').disabled = false;
+  $('btnCompare').disabled = false;
+  $('btnPrint').disabled = false;
+  $('btnCheck').disabled = false;
+  const bands = S.cp.bandLimits()
+    .map((b, i) => b ? 'slot ' + i + ': ' + (b.lo / 1e6).toFixed(4) + '\u2013' + (b.hi / 1e6).toFixed(4) + ' MHz' : null)
+    .filter(Boolean);
+  $('bandHint').textContent = bands.length
+    ? 'Band limits \u2014 ' + bands.join(', ') + '. This tool will not edit them.'
+    : 'No band limits stored yet. Read a radio or open a file to see them.';
+}
+
+// ------------------------------------------------------------------ modal
+let modalResolve = null;
+function showModal(title, bodyHtml, opts) {
+  opts = opts || {};
+  $('modalTitle').textContent = title;
+  $('modalBody').innerHTML = bodyHtml;
+  const ok = $('modalOk'), cancel = $('modalCancel');
+  ok.style.display = opts.ok === null ? 'none' : '';
+  ok.textContent = opts.ok || 'Continue';
+  cancel.textContent = opts.cancel || 'Cancel';
+  $('scrim').classList.add('on');
+  (opts.ok === null ? cancel : ok).focus();
+  return new Promise((res) => { modalResolve = res; });
+}
+function closeModal(v) {
+  $('scrim').classList.remove('on');
+  if (modalResolve) { const r = modalResolve; modalResolve = null; r(v); }
+}
+$('modalOk').onclick = () => closeModal(true);
+$('modalCancel').onclick = () => closeModal(false);
+$('scrim').addEventListener('click', (e) => { if (e.target === $('scrim')) closeModal(false); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $('scrim').classList.contains('on')) closeModal(false);
+});
+
+// ------------------------------------------------------------------- tabs
+document.querySelectorAll('.tabs button').forEach((b) => {
+  b.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+    document.querySelectorAll('.tabpanel').forEach((pnl) => pnl.classList.toggle('on', pnl.id === b.dataset.panel));
+  };
+});
+document.querySelectorAll('.subtabs button').forEach((b) => {
+  b.onclick = () => {
+    // scoped to this panel. When it was not, opening a VFO sub-tab cleared the
+    // Channels ones as well, and coming back showed an empty panel.
+    const panel = b.closest('.tabpanel');
+    panel.querySelectorAll('.subtabs button').forEach(
+      (x) => x.setAttribute('aria-selected', String(x === b)));
+    panel.querySelectorAll('.subpanel').forEach(
+      (p) => p.classList.toggle('on', p.id === b.dataset.sub));
+  };
+});
+
+// -------------------------------------------------------------- rendering
+/* Byte-and-bit detail. This is the tool for working out what an unmapped byte
+   does: change one setting in the manufacturer's software, save, compare, and
+   read off which bits moved. */
+function renderBitSection(a, b) {
+  const all = T.diffBits(a, b);
+  if (!all.length) return '';
+  const other = T.diffBits(a, b, { skipChannels: true });
+  const chanCount = all.length - other.length;
+  const n = (c, word) => c + ' ' + word + (c === 1 ? '' : 's');
+
+  // Collapsed by default: the decoded lists above are what you usually want.
+  // The raw table matters when working out what an unmapped byte does, and
+  // every unmapped byte is outside the channel area - so channel bytes are
+  // left out of the first table, or they would bury everything else.
+  let h = '<details class="bytes"><summary class="legend">Byte level \u2014 '
+    + (other.length ? n(other.length, 'non-channel byte') : 'channel bytes only')
+    + '</summary>';
+
+  if (other.length) {
+    h += '<p class="muted">Settings, band limits, tone blocks and the unmapped '
+      + 'areas. Channel bytes are left out here. To work out what an unmapped byte '
+      + 'does: change one thing in the manufacturer\u2019s software, save, and '
+      + 'compare \u2014 the bits that moved are the answer.</p>'
+      + '<pre class="bitdiff" id="bitDiffText">' + esc(T.formatBitDiff(other)) + '</pre>'
+      + '<div class="rowbtns"><button class="btn" data-copy="bitDiffText">Copy</button></div>';
+  } else {
+    h += '<p class="muted">Only channel bytes differ, so there is nothing to show '
+      + 'here. The full table below has them.</p>';
+  }
+
+  if (chanCount) {
+    h += '<details><summary class="legend">Show all ' + n(all.length, 'byte')
+      + ', channels included</summary>'
+      + '<p class="muted">The complete table: the ' + n(other.length, 'byte')
+      + ' above plus ' + n(chanCount, 'channel byte') + '.</p>'
+      + '<pre class="bitdiff" id="bitDiffAll">' + esc(T.formatBitDiff(all)) + '</pre>'
+      + '<div class="rowbtns"><button class="btn" data-copy="bitDiffAll">Copy</button></div></details>';
+  }
+  return h + '</details>';
+}
+
+$('modalBody').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-copy]');
+  if (!b) return;
+  const el = $(b.dataset.copy);
+  if (!el) return;
+  const text = el.textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => { b.textContent = 'Copied'; },
+      () => { b.textContent = 'Select and copy'; });
+  } else {
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(r);
+    b.textContent = 'Selected \u2014 press Ctrl+C';
+  }
+});
+/* Every row below reads "field  from -> to". Without saying which side is
+   which, "Squelch level 5 -> OFF" is ambiguous. This states it once, at the
+   top, in the same shape as the rows. */
+function renderDiffDirection(fromLabel, toLabel) {
+  return '<div class="dirline">'
+    + '<span class="side from">' + esc(fromLabel) + '</span>'
+    + '<span class="arrow">&rarr;</span>'
+    + '<span class="side to">' + esc(toLabel) + '</span>'
+    + '</div>';
+}
+
+/* The tally. Rendered after the list of changes, not before it: what changed
+   is the answer, the counts are the footnote. */
+function renderDiffSummary(d, note) {
+  if (!d || !d.bytes) return '';
+  return (note ? '<p class="muted">' + esc(note) + '</p>' : '')
+    + '<div class="summary">'
+    + '<div><b>' + d.bytes + '</b>bytes</div>'
+    + '<div><b>' + d.channels.filter((c) => c.kind === 'added').length + '</b>added</div>'
+    + '<div><b>' + d.channels.filter((c) => c.kind === 'changed').length + '</b>changed</div>'
+    + '<div><b>' + d.channels.filter((c) => c.kind === 'removed').length + '</b>removed</div>'
+    + '<div><b>' + (d.settings.length + d.fm.length + d.vfo.length) + '</b>settings</div>'
+    + (d.emptySlots ? '<div><b>' + d.emptySlots + '</b>empty slots</div>' : '')
+    + '</div>'
+    + (d.emptySlots
+        ? '<p class="muted">' + d.emptySlots + ' unused channel slot'
+          + (d.emptySlots === 1 ? '' : 's') + ' also changed. The radio ignores '
+          + 'them \u2014 what exists is decided by the in-use list \u2014 but they '
+          + 'are real bytes and are counted in the total above.</p>'
+        : '');
+}
+
+function renderDiffBody(d) {
+  if (!d) return '<p class="muted">No baseline to compare against.</p>';
+  if (!d.bytes) return '<p class="muted">No differences.</p>';
+  let h = '';
+  if (d.channels.length) {
+    h += '<ul class="dlist">';
+    for (const c of d.channels.slice(0, 60)) {
+      const tag = c.kind === 'added' ? '<span class="tag add">added</span>'
+        : c.kind === 'removed' ? '<span class="tag del">removed</span>'
+        : '<span class="tag chg">changed</span>';
+      const who = c.to || c.from;
+      h += '<li>' + tag + '<b>Channel ' + (c.index + 1) + '</b> '
+        + esc(who.name || '') + ' <span class="k">'
+        + (who.rxHz ? (who.rxHz / 1e6).toFixed(5) + ' MHz' : '') + '</span>';
+      if (c.fields.length) {
+        h += '<br>' + c.fields.map((f) => '<span class="k">' + esc(f.label) + '</span>'
+          + esc(f.from) + '<span class="arrow">&rarr;</span>' + esc(f.to)).join('&nbsp; ');
+      }
+      h += '</li>';
+    }
+    h += '</ul>';
+    if (d.channels.length > 60) h += '<p class="muted">' + (d.channels.length - 60) + ' more channels not listed.</p>';
+  }
+  const rows = (title, list) => {
+    if (!list || !list.length) return '';
+    return '<h4 class="dhead">' + esc(title) + '</h4><ul class="dlist">'
+      + list.map((x) => '<li><span class="k">' + esc(x.label) + '</span>'
+        + esc(x.from) + '<span class="arrow">&rarr;</span>' + esc(x.to) + '</li>').join('')
+      + '</ul>';
+  };
+  h += rows('Radio settings', d.settings);
+  h += rows('VFO', d.vfo);
+  h += rows('FM broadcast', d.fm);
+
+  // Regions whose contents are spelled out above do not need a byte tally as
+  // well - saying "global settings (1 bytes)" under "Backlight 7 to 3" adds
+  // nothing. What is left is the blocks nothing decodes yet.
+  const decoded = /global settings|FM broadcast|FM VFO|power-on|intro|band limits|VFO records/i;
+  const rest = d.regions.filter(
+    (r) => !/channel|bitmap/.test(r.name) && !decoded.test(r.name));
+  if (rest.length) {
+    h += '<p class="muted">Also changed, not decoded here: '
+      + rest.map((r) => esc(r.name) + ' (' + r.count
+        + (r.count === 1 ? ' byte' : ' bytes') + ')').join(', ') + '.</p>';
+  }
+  return h;
+}
+
+function renderIssuesBody(list) {
+  if (!list.length) return '<p class="muted">No problems found.</p>';
+  const errs = list.filter((i) => i.level === 'error');
+  let h = '<ul class="dlist">';
+  for (const i of list.slice(0, 80)) {
+    h += '<li><span class="tag ' + (i.level === 'error' ? 'err' : 'warn') + '">'
+      + i.level + '</span>' + esc(i.message) + '</li>';
+  }
+  h += '</ul>';
+  if (list.length > 80) h += '<p class="muted">' + (list.length - 80) + ' more not listed.</p>';
+  if (errs.length) h = '<p><b>' + errs.length + ' error' + (errs.length === 1 ? '' : 's')
+    + '</b> and ' + (list.length - errs.length) + ' warning'
+    + (list.length - errs.length === 1 ? '' : 's') + '.</p>' + h;
+  return h;
+}
+
+function renderPreWrite(diff, issues, baseline) {
+  let h = '';
+  const errs = issues.filter((i) => i.level === 'error');
+  if (errs.length) {
+    h += '<p class="note" style="margin-bottom:12px">' + errs.length
+      + ' problem' + (errs.length === 1 ? '' : 's') + ' that could make the radio '
+      + 'transmit where it should not. Review these before continuing.</p>';
+  }
+  if (!baseline) {
+    h += '<p class="note" style="margin-bottom:12px">No comparison was made, so '
+      + 'this will overwrite all ' + T.MEM_SIZE + ' bytes without showing you what changes.</p>';
+  }
+  h += '<h3 style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:0 0 8px">What changes</h3>';
+  if (diff && baseline) h += renderDiffDirection('On the radio now', 'After this write');
+  h += renderDiffBody(diff);
+  h += renderDiffSummary(diff);
+  if (issues.length) {
+    h += '<h3 style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:16px 0 8px">Checks</h3>';
+    h += renderIssuesBody(issues);
+  }
+  if (diff && baseline) h += renderBitSection(baseline, S.cp);
+  if (!S.savedThisSession) {
+    h += '<p class="note" style="margin-top:12px">You have not saved a copy of this '
+      + 'codeplug yet. If the write goes wrong you will have nothing to restore from.</p>';
+  }
+  return h;
+}
+
+/* Which settings groups are folded open. Remembered per group so the panel
+   comes back the way you left it. */
+const SETTINGS_OPEN_DEFAULT = { radio: false, display: false, tx: false,
+                                keys: true, security: false };
+function settingsOpen(g) {
+  const saved = store.get('grpOpen', null);
+  if (saved && Object.prototype.hasOwnProperty.call(saved, g)) return !!saved[g];
+  return !!SETTINGS_OPEN_DEFAULT[g];
+}
+
+function renderSettings() {
+  if (!S.cp) return;
+  const cell = (f) => {
+    const v = S.cp.getSetting(f.key);
+    const tip = T.SETTINGS_HELP[f.key] || '';
+    if (f.readOnly) {
+      return '<div class="f" title="' + esc(tip) + '"><label>' + esc(f.label)
+        + ' <span class="fixed">fixed</span></label><input value="'
+        + esc(f.fixedText || (f.list[v] !== undefined ? f.list[v] : v))
+        + '" disabled title="' + esc(tip) + '"></div>';
+    }
+    // everything is a dropdown, including the numeric fields
+    const list = f.kind === 'num'
+      ? Array.from({ length: f.max - f.min + 1 }, (_, i) => String(f.min + i))
+      : f.list;
+    const cur = f.kind === 'num' ? v - f.min : v;
+    // The manufacturer's key names are not self-evident, so each option in a
+    // key dropdown carries its own explanation.
+    const perOption = f.list === T.KEY_FN ? T.KEY_FN_HELP : null;
+    let opts = list.map((o, i) =>
+      '<option value="' + (f.kind === 'num' ? f.min + i : i) + '"'
+      + (i === cur ? ' selected' : '')
+      + (perOption ? ' title="' + esc(perOption[i]) + '"' : '')
+      + '>' + esc(o) + '</option>').join('');
+    if (f.kind !== 'num' && v >= f.list.length) {
+      opts += '<option value="' + v + '" selected>value ' + v + ' (not in the list)</option>';
+    }
+    const full = perOption && perOption[v]
+      ? tip + '\n\nCurrently ' + f.list[v] + ': ' + perOption[v]
+      : tip;
+    return '<div class="f" title="' + esc(full) + '"><label for="set_' + f.key + '">'
+      + esc(f.label) + '</label>'
+      + '<select id="set_' + f.key + '" data-set="' + f.key + '" title="' + esc(full) + '">'
+      + opts + '</select></div>';
+  };
+
+  let html = '';
+  for (const [g, title] of T.SETTINGS_GROUPS) {
+    const fields = T.SETTINGS_FIELDS.filter((f) => f.group === g);
+    if (!fields.length) continue;
+    // Each group folds away. Only Keys is open to begin with - it is the one
+    // you come here to change; the rest are set once and left alone.
+    const open = settingsOpen(g);
+    html += '<details class="grp"' + (open ? ' open' : '') + ' data-grp="' + g + '">'
+      + '<summary class="subhead">' + esc(title) + '</summary>'
+      + '<div class="fields">' + fields.map(cell).join('');
+    // rows that only make sense once something else is switched on
+    if (g === 'display' && S.cp.getSetting('introMode') === 2) {
+      html += '<div class="f wide"><label for="introA">Intro line 1</label>'
+        + '<input id="introA" maxlength="16" value="' + esc(S.cp.introLine(1)) + '" data-intro="1"></div>'
+        + '<div class="f wide"><label for="introB">Intro line 2</label>'
+        + '<input id="introB" maxlength="16" value="' + esc(S.cp.introLine(2)) + '" data-intro="2"></div>';
+    }
+    if (g === 'security' && S.cp.getSetting('pwdEnable') === 1) {
+      html += '<div class="f wide" title="Six digits. The manufacturer\u2019s software '
+        + 'accepts numbers only, so anything else is ignored as you type."><label for="set_pwd">'
+        + 'Password (6 digits)</label><input id="set_pwd" maxlength="6" inputmode="numeric" '
+        + 'pattern="[0-9]*" value="' + esc(S.cp.getPassword()) + '" data-pwd="1"></div>';
+    }
+    html += '</div></details>';
+  }
+  $('setFields').innerHTML = html;
+}
+
+$('setFields').addEventListener('toggle', (e) => {
+  const d = e.target.closest('details.grp');
+  if (!d) return;
+  const saved = store.get('grpOpen', {}) || {};
+  saved[d.dataset.grp] = d.open;
+  store.set('grpOpen', saved);
+}, true);
+
+$('setFields').addEventListener('input', (e) => {
+  if (!e.target.dataset.pwd) return;
+  const clean = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+  if (clean !== e.target.value) e.target.value = clean;
+});
+
+$('setFields').addEventListener('change', (e) => {
+  const el = e.target;
+  try {
+    if (el.dataset.pwd) {
+      const stored = S.cp.setPassword(el.value);
+      el.value = stored;
+      say('Password set to ' + stored + '.');
+    }
+    else if (el.dataset.intro) {
+      S.cp.setIntroLine(+el.dataset.intro, el.value);
+      say('Intro line ' + el.dataset.intro + ' set.');
+    } else if (el.dataset.set) {
+      S.cp.setSetting(el.dataset.set, +el.value);
+      const f = T.SETTINGS_FIELDS.find((x) => x.key === el.dataset.set);
+      say(f.label + ' set.');
+      // these two reveal or hide further rows
+      if (f.key === 'introMode' || f.key === 'pwdEnable') renderSettings();
+    } else return;
+    markDirty(true);
+  } catch (err) {
+    say(err.message, 'bad');
+    renderSettings();
+  }
+});
+
+const VFO_HELP = {
+    "rx": "The frequency this side of the display listens on when it is not on a memory channel.",
+    "tx": "The frequency it transmits on. The manufacturer\u2019s window shows this as a direction and an offset; the radio stores the frequency itself. Type off for receive-only.",
+    "enc": "Sub-audible tone sent while transmitting, so a repeater opens for you.",
+    "dec": "Tone that must be present before the speaker unmutes.",
+    "power": "Transmit power used on this VFO: High, Mid or Low.",
+    "bandwidth": "Channel spacing. Narrow is 12.5 kHz, Wide 25 kHz.",
+    "step": "How far each turn of the dial moves this VFO.",
+    "signalling": "Optional signalling system.",
+    "busyLock": "Refuses to transmit while the frequency is occupied.",
+    "scrambler": "Voice scrambler slot. Both ends must use the same number.",
+    "dtmfPttId": "When a DTMF identity is sent: at the start of a transmission, the end, both, or never.",
+    "rev": "Reverse: swaps transmit and receive, so you hear a repeater\u2019s input and can judge whether the other station is workable direct.",
+    "talk": "Talk around: transmits on the receive frequency, bypassing the repeater to work a station direct."
+  };
+
+function renderVfo() {
+  if (!S.cp) return;
+  const block = (f) => {
+    const c = S.cp.getVfo(f.key);
+    const id = (n) => 'v_' + f.key + '_' + n;
+    const tip = (n) => ' title="' + esc(VFO_HELP[n] || '') + '"';
+    const sel = (n, label, list, v) => '<div class="f"' + tip(n) + '><label for="' + id(n) + '">'
+      + label + '</label><select id="' + id(n) + '"' + tip(n) + '>'
+      + list.map((o, i) => '<option value="' + i + '"' + (i === v ? ' selected' : '')
+        + '>' + esc(o) + '</option>').join('') + '</select></div>';
+    const tone = (n, label, cur) => {
+      let out = '', group = null;
+      for (const ch of T.toneChoices()) {
+        if (ch.group !== group) { if (group) out += '</optgroup>'; group = ch.group;
+          if (group) out += '<optgroup label="' + esc(group) + '">'; }
+        out += '<option value="' + esc(ch.value) + '"'
+          + (ch.label === cur ? ' selected' : '') + '>' + esc(ch.label) + '</option>';
+      }
+      if (group) out += '</optgroup>';
+      return '<div class="f"' + tip(n) + '><label for="' + id(n) + '">' + label + '</label>'
+        + '<select id="' + id(n) + '"' + tip(n) + '>' + out + '</select></div>';
+    };
+    return '<h3 class="subhead">' + esc(f.band.toUpperCase()) + '</h3><div class="fields">'
+      + '<div class="f"' + tip('rx') + '><label for="' + id('rx') + '">Receive MHz</label>'
+      + '<input id="' + id('rx') + '" value="' + mhz(c.rxHz) + '"></div>'
+      + '<div class="f"' + tip('tx') + '><label for="' + id('tx') + '">Transmit MHz</label>'
+      + '<input id="' + id('tx') + '" value="'
+      + (c.txHz === T.RX_ONLY_HZ ? 'off' : c.txHz ? mhz(c.txHz) : '') + '"></div>'
+      + tone('enc', 'Encode', T.toneLabel(c.txTone, c.txInv))
+      + tone('dec', 'Decode', T.toneLabel(c.rxTone, c.rxInv))
+      + sel('power', 'Power', T.POWER, c.power)
+      + sel('bandwidth', 'Wide', T.BANDWIDTH, c.bandwidth)
+      + sel('step', 'Step', T.STEPS_KHZ.map(String), c.step)
+      + sel('signalling', 'Signal', T.SIGNALLING, c.signalling)
+      + sel('busyLock', 'B_Lock', T.BUSY_LOCK, c.busyLock)
+      + sel('scrambler', 'Scramble', T.SCRAMBLER, c.scrambler)
+      + sel('dtmfPttId', 'DTMF PTT-ID', T.PTT_ID, c.dtmfPttId)
+      + '<div class="f"' + tip('rev') + '><label for="' + id('rev') + '">Rev</label>'
+      + '<select id="' + id('rev') + '"' + tip('rev') + '>'
+      + '<option value="0"' + (c.reverse ? '' : ' selected') + '>OFF</option>'
+      + '<option value="1"' + (c.reverse ? ' selected' : '') + '>ON</option></select></div>'
+      + '<div class="f"' + tip('talk') + '><label for="' + id('talk') + '">Talk Off</label>'
+      + '<select id="' + id('talk') + '"' + tip('talk') + '>'
+      + '<option value="0"' + (c.talkAround ? '' : ' selected') + '>OFF</option>'
+      + '<option value="1"' + (c.talkAround ? ' selected' : '') + '>ON</option></select></div>'
+      + '</div><div class="rowbtns"><button class="btn" data-vfo="' + f.key
+      + '" title="' + esc('Writes these values into ' + f.label
+        + '. Only that record changes.') + '">Apply</button></div>';
+  };
+  $('vfoFieldsA').innerHTML = T.VFO_SLOTS.filter((f) => f.key[0] === 'l').map(block).join('');
+  $('vfoFieldsB').innerHTML = T.VFO_SLOTS.filter((f) => f.key[0] === 'r').map(block).join('');
+}
+
+['vfoFieldsA', 'vfoFieldsB'].forEach((box) => $(box).addEventListener('click', (e) => {
+  const b = e.target.closest('[data-vfo]');
+  if (!b || !S.cp) return;
+  const key = b.dataset.vfo;
+  const f = T.VFO_SLOTS.find((x) => x.key === key);
+  const g = (n) => $('v_' + key + '_' + n);
+  const c = S.cp.getVfo(key);
+  const rx = Math.round(parseFloat(g('rx').value) * 1e6);
+  if (!isFinite(rx) || rx <= 0) { say('Receive frequency should look like 145.500.', 'bad'); return; }
+  const txt = g('tx').value.trim();
+  let tx;
+  if (/^off$/i.test(txt)) tx = T.RX_ONLY_HZ;
+  else if (!txt) tx = rx;
+  else {
+    tx = Math.round(parseFloat(txt) * 1e6);
+    if (!isFinite(tx) || tx <= 0) { say('Transmit should be a frequency, or off.', 'bad'); return; }
+  }
+  const enc = T.parseTone(g('enc').value), dec = T.parseTone(g('dec').value);
+  Object.assign(c, { rxHz: rx, txHz: tx,
+    txTone: enc.word, txInv: enc.inverted, rxTone: dec.word, rxInv: dec.inverted,
+    power: +g('power').value, bandwidth: +g('bandwidth').value, step: +g('step').value,
+    signalling: +g('signalling').value, busyLock: +g('busyLock').value,
+    scrambler: +g('scrambler').value, dtmfPttId: +g('dtmfPttId').value,
+    reverse: g('rev').value === '1', talkAround: g('talk').value === '1' });
+  S.cp.setVfo(key, c);
+  markDirty(true);
+  renderVfo();
+  say(f.label + ' set to ' + mhz(rx) + ' MHz.');
+}));
+
+function renderFm() {
+  if (!S.cp) return;
+  $('fmVfo').disabled = false;
+  $('fmVfo').value = S.cp.fmVfo() ? (S.cp.fmVfo() / 1e6).toFixed(2) : '';
+  $('fmList').innerHTML = S.cp.fmPresets().map((p) =>
+    '<label><input type="checkbox" data-fm="' + p.index + '"' + (p.enabled ? ' checked' : '') + '>'
+    + String(p.index + 1).padStart(2, '0') + '</label>'
+    + '<input type="text" data-fmf="' + p.index + '" value="'
+    + (p.hz ? (p.hz / 1e6).toFixed(2) : '') + '">').join('');
+}
+
+function applyFm() {
+  const rows = S.cp.fmPresets();
+  document.querySelectorAll('[data-fmf]').forEach((el) => {
+    const i = +el.dataset.fmf;
+    const v = el.value.trim();
+    const hz = v ? Math.round(parseFloat(v) * 1e6) : 0;
+    const en = document.querySelector('[data-fm="' + i + '"]').checked;
+    if ((hz || 0) !== rows[i].hz || en !== rows[i].enabled) {
+      S.cp.setFmPreset(i, isFinite(hz) ? hz : 0, en);
+      markDirty(true);
+    }
+  });
+  const v = $('fmVfo').value.trim();
+  const hz = v ? Math.round(parseFloat(v) * 1e6) : 0;
+  if (isFinite(hz) && hz !== S.cp.fmVfo()) { S.cp.setFmVfo(hz); markDirty(true); }
+}
+
+// -------------------------------------------------------------------- csv
+$('btnCsvOut').onclick = () => {
+  const n = S.cp.channels().filter((c) => c.used).length;
+  download('th2000-channels-' + stamp() + '.csv',
+    new Blob([T.csvSerialize(S.cp)], { type: 'text/csv' }));
+  say('Exported ' + n + ' channel' + (n === 1 ? '' : 's') + ' as CSV.', 'good');
+};
+
+$('btnCsvIn').onclick = () => $('fileCsv').click();
+$('fileCsv').onchange = async (ev) => {
+  const f = ev.target.files[0];
+  ev.target.value = '';
+  if (!f) return;
+  const r = T.csvParse(await f.text());
+  if (r.errors.length) {
+    await showModal('That CSV could not be imported',
+      '<p>Nothing has been changed. Fix these lines and try again:</p><ul class="dlist">'
+      + r.errors.slice(0, 40).map((e) => '<li><span class="k">line ' + e.line + '</span>' + esc(e.message) + '</li>').join('')
+      + '</ul>' + (r.errors.length > 40 ? '<p class="muted">' + (r.errors.length - 40) + ' more.</p>' : ''),
+      { ok: null, cancel: 'Close' });
+    say('CSV import cancelled: ' + r.errors.length + ' problem' + (r.errors.length === 1 ? '' : 's') + '.', 'bad');
+    return;
+  }
+  const wipe = await showModal('Import ' + r.channels.length + ' channel'
+    + (r.channels.length === 1 ? '' : 's'),
+    '<p>Channels listed in the file will be replaced. Channels not mentioned can '
+    + 'either be left alone or cleared first.</p>'
+    + (r.warnings.length ? '<p class="muted">' + r.warnings.map((w) => esc(w.message)).join('; ') + '</p>' : '')
+    + '<p><label><input type="checkbox" id="csvWipe"> Clear all other channels first</label></p>',
+    { ok: 'Import', cancel: 'Cancel' });
+  if (!wipe) { say('CSV import cancelled.'); return; }
+  const clearFirst = $('csvWipe') && $('csvWipe').checked;
+  if (clearFirst) for (let i = 0; i < T.CHAN_NUM; i++) S.cp.clearChannel(i);
+  r.channels.forEach((c) => S.cp.setChannel(c));
+  renderAll(); markDirty(true);
+  say('Imported ' + r.channels.length + ' channel' + (r.channels.length === 1 ? '' : 's')
+    + ' from ' + f.name + '.', 'good');
+};
+
+// ---------------------------------------------------------------- compare
+$('btnCompare').onclick = () => $('fileCmp').click();
+$('fileCmp').onchange = async (ev) => {
+  const f = ev.target.files[0];
+  ev.target.value = '';
+  if (!f) return;
+  try {
+    const buf = new Uint8Array(await f.arrayBuffer());
+    let bytes;
+    if (/\.icf$/i.test(f.name) || buf[0] === 0x43) {
+      let text = ''; for (const b of buf) text += String.fromCharCode(b);
+      bytes = T.icfParse(text).bytes;
+    } else bytes = buf;
+    const other = new T.Codeplug(bytes);
+    const d = T.diffCodeplugs(other, S.cp);
+    await showModal('Compared with ' + f.name,
+      renderDiffDirection(f.name, 'Current state')
+      + renderDiffBody(d)
+      + renderDiffSummary(d)
+      + renderBitSection(other, S.cp),
+      { ok: null, cancel: 'Close' });
+    say(d.bytes ? d.bytes + ' bytes differ from ' + f.name : 'Identical to ' + f.name, d.bytes ? '' : 'good');
+  } catch (e) {
+    say('Could not compare with ' + f.name + ': ' + e.message, 'bad');
+  }
+};
+
+// ------------------------------------------------------------------ bulk
+const BULK_FIELDS = [
+  ['power', 'Power', T.POWER], ['bandwidth', 'Bandwidth', T.BANDWIDTH],
+  ['step', 'Step', T.STEPS_KHZ.map((v) => v + ' kHz')],
+  ['skip', 'Scan', ['Include', 'Skip']],
+  ['busyLock', 'Busy lock', T.BUSY_LOCK], ['sqlMode', 'Squelch mode', T.SQL_MODE],
+  ['signalling', 'Signalling', T.SIGNALLING], ['scrambler', 'Scrambler', T.SCRAMBLER],
+  ['dtmfPttId', 'DTMF PTT-ID', T.PTT_ID], ['tone5PttId', '5-tone PTT-ID', T.PTT_ID]
+];
+$('bField').innerHTML = BULK_FIELDS.map((f, i) => '<option value="' + i + '">' + f[1] + '</option>').join('');
+function fillBulkValues() {
+  const list = BULK_FIELDS[+$('bField').value][2];
+  $('bValue').innerHTML = list.map((o, i) => '<option value="' + i + '">' + esc(o) + '</option>').join('');
+}
+$('bField').onchange = fillBulkValues;
+fillBulkValues();
+
+function syncSelOnly() {
+  const on = $('chkSelOnly').checked;
+  // hidden rather than greyed: a range you cannot use is just noise
+  $('bulkRangeBoxes').hidden = on;
+  $('bFrom').disabled = on;
+  $('bTo').disabled = on;
+  $('selOnlyWho').textContent = on ? '\u2014 channel ' + (S.sel + 1) : '';
+  // Setting a field across many channels and find-and-replace only earn their
+  // place over a range. For one channel the side panel and the table are
+  // quicker, so they get out of the way.
+  $('secBulkField').hidden = on;
+  $('secBulkRename').hidden = on;
+}
+$('chkSelOnly').onchange = syncSelOnly;
+syncSelOnly();
+
+function bulkRange() {
+  if ($('chkSelOnly').checked) return [S.sel, S.sel];
+  const a = parseInt($('bFrom').value, 10), b = parseInt($('bTo').value, 10);
+  if (!(a >= 1 && a <= T.CHAN_NUM) || !(b >= 1 && b <= T.CHAN_NUM) || b < a) {
+    say('The range must be two channel numbers between 1 and ' + T.CHAN_NUM + ', low first.', 'bad');
+    return null;
+  }
+  return [a - 1, b - 1];
+}
+const afterBulk = (n, what) => {
+  renderAll(); markDirty(true);
+  say(n ? what.replace('%d', n) : 'Nothing in that range to change.', n ? 'good' : '');
+};
+
+$('btnBulkApply').onclick = () => {
+  const r = bulkRange(); if (!r) return;
+  const f = BULK_FIELDS[+$('bField').value];
+  const v = +$('bValue').value;
+  const patch = {}; patch[f[0]] = f[0] === 'skip' ? v === 1 : v;
+  afterBulk(T.applyToRange(S.cp, r[0], r[1], patch), 'Set ' + f[1].toLowerCase() + ' on %d channels.');
+};
+$('btnRename').onclick = () => {
+  const r = bulkRange(); if (!r) return;
+  afterBulk(T.renameRange(S.cp, r[0], r[1], $('bFind').value, $('bRepl').value), 'Renamed %d channels.');
+};
+const dest = () => {
+  const d = parseInt($('bDest').value, 10);
+  if (!(d >= 1 && d <= T.CHAN_NUM)) { say('Destination must be between 1 and ' + T.CHAN_NUM + '.', 'bad'); return null; }
+  return d - 1;
+};
+$('btnCopyRange').onclick = () => {
+  const r = bulkRange(), d = dest(); if (!r || d === null) return;
+  afterBulk(T.copyRange(S.cp, r[0], r[1], d), 'Copied %d channels.');
+};
+$('btnMoveRange').onclick = () => {
+  const r = bulkRange(), d = dest(); if (!r || d === null) return;
+  afterBulk(T.moveRange(S.cp, r[0], r[1], d), 'Moved %d channels.');
+};
+$('btnDeleteRange').onclick = async () => {
+  const r = bulkRange(); if (!r) return;
+  const n = S.cp.channels().filter((c) => c.used && c.index >= r[0] && c.index <= r[1]).length;
+  if (!n) { say('Nothing in that range to delete.'); return; }
+  if (!await showModal('Delete ' + n + ' channel' + (n === 1 ? '' : 's') + '?',
+    '<p>Channels ' + (r[0] + 1) + ' to ' + (r[1] + 1) + ' will be cleared. This only '
+    + 'changes the codeplug in front of you, not the radio.</p>', { ok: 'Delete', cancel: 'Keep' })) return;
+  afterBulk(T.deleteRange(S.cp, r[0], r[1]), 'Deleted %d channels.');
+};
+$('btnCompact').onclick = () => afterBulk(T.compact(S.cp), 'Packed %d channels into a run with no gaps.');
+
+// ----------------------------------------------------------------- checks
+$('btnCheck').onclick = () => {
+  const list = T.validate(S.cp);
+  $('issues').innerHTML = renderIssuesBody(list);
+  const errs = list.filter((i) => i.level === 'error').length;
+  say(list.length ? (errs + ' error' + (errs === 1 ? '' : 's') + ', '
+    + (list.length - errs) + ' warning' + (list.length - errs === 1 ? '' : 's'))
+    : 'Checks found nothing wrong.', errs ? 'bad' : list.length ? '' : 'good');
+};
+
+// ------------------------------------------------------------------ print
+$('btnPrint').onclick = () => {
+  // Every column says something. A blank cell on paper reads as missing data,
+  // not as a default - which is why Scan printed nothing for an included
+  // channel, the same fault the on-screen table had.
+  const rows = S.cp.channels().filter((c) => c.used).map((c) =>
+    '<tr><td>' + (c.index + 1) + '</td><td>'
+    + (esc(c.name) || 'unnamed') + '</td><td>'
+    + (c.rxHz ? T.mhzText(c.rxHz) : 'not set') + '</td><td>'
+    + (c.txHz === T.RX_ONLY_HZ ? 'rx only'
+        : c.txHz ? T.mhzText(c.txHz) : 'not set') + '</td><td>'
+    + esc(shiftLabel(c)) + '</td><td>'
+    + esc(T.toneLabel(c.txTone, c.txInv)) + '</td><td>'
+    + esc(T.toneLabel(c.rxTone, c.rxInv)) + '</td><td>'
+    + (T.POWER[c.power] !== undefined ? T.POWER[c.power] : '?') + '</td><td>'
+    + (T.BANDWIDTH[c.bandwidth] !== undefined ? T.BANDWIDTH[c.bandwidth] : '?')
+    + '</td><td>'
+    + (T.STEPS_KHZ[c.step] !== undefined ? T.STEPS_KHZ[c.step] : '?') + '</td><td>'
+    + (c.skip ? 'skip' : 'include') + '</td></tr>').join('');
+  const html = '<!DOCTYPE html><meta charset="utf-8"><title>TH-2000 channels</title>'
+    + '<style>body{font:12px system-ui,sans-serif;margin:24px;color:#111}'
+    + 'h1{font-size:15px;margin:0 0 2px}p{color:#666;margin:0 0 14px;font-size:11px}'
+    + 'table{border-collapse:collapse;width:100%}'
+    + 'th,td{border-bottom:1px solid #ccc;padding:3px 6px;text-align:left;'
+    + 'font-variant-numeric:tabular-nums}'
+    + 'th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#555}'
+    + 'td:nth-child(3),td:nth-child(4){font-family:ui-monospace,monospace}'
+    + '@media print{body{margin:8mm}}</style>'
+    + '<h1>' + esc(S.cp.introLine(1) || 'TH-2000') + ' &mdash; channel list</h1>'
+    + '<p>' + new Date().toLocaleString() + ' &middot; '
+    + S.cp.channels().filter((c) => c.used).length + ' of ' + T.CHAN_NUM
+    + ' channels</p>'
+    + '<table><thead><tr><th>Ch</th><th>Name</th><th>Receive</th><th>Transmit</th>'
+    + '<th>Shift</th><th>Encode</th><th>Decode</th><th>Power</th><th>BW</th>'
+    + '<th>Step</th><th>Scan</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table>';
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 250); }
+  else download('th2000-channels-' + stamp() + '.html', new Blob([html], { type: 'text/html' }));
+  say('Channel list ready to print.', 'good');
+};
+
+// -------------------------------------------------------------- splitter
+/* Drag the divider to trade table width against panel width. Kept in a CSS
+   custom property so the grid does the work; double-click restores the
+   default. Hidden below 1000px where the layout stacks instead. */
+(function () {
+  const bar = $('splitter'), DEFAULT = 500, MIN = 400, MAX_FRAC = 0.72;
+  let dragging = false;
+  const apply = (px) => {
+    const cap = Math.min(window.innerWidth * MAX_FRAC, window.innerWidth - 240);
+    const w = Math.max(MIN, Math.min(px, cap));
+    document.documentElement.style.setProperty('--rail', w + 'px');
+    bar.setAttribute('aria-valuenow', String(Math.round(w)));
+    store.set('railWidth', Math.round(w));
+  };
+  bar.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    bar.classList.add('drag');
+    bar.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  bar.addEventListener('pointermove', (e) => {
+    if (dragging) apply(window.innerWidth - e.clientX);
+  });
+  const stop = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    bar.classList.remove('drag');
+    try { bar.releasePointerCapture(e.pointerId); } catch (_) {}
+  };
+  bar.addEventListener('pointerup', stop);
+  bar.addEventListener('pointercancel', stop);
+  bar.addEventListener('dblclick', () => {
+    document.documentElement.style.removeProperty('--rail');
+    store.set('railWidth', null);
+    say('Panel width reset.');
+  });
+  // keyboard, for anyone not using a pointer
+  bar.addEventListener('keydown', (e) => {
+    const cur = parseInt(getComputedStyle(document.documentElement)
+      .getPropertyValue('--rail'), 10) || DEFAULT;
+    if (e.key === 'ArrowLeft') { apply(cur + 24); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { apply(cur - 24); e.preventDefault(); }
+    if (e.key === 'Home') { document.documentElement.style.removeProperty('--rail'); }
+  });
+})();
+
+// ------------------------------------------------------------------ theme
+const prefersDark = () => {
+  try { return window.matchMedia('(prefers-color-scheme: dark)').matches; }
+  catch (e) { return false; }
+};
+function applyTheme(choice) {
+  const dark = choice === 'dark' || (choice === 'auto' && prefersDark());
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+}
+$('selTheme').value = store.get('theme', 'auto');
+applyTheme($('selTheme').value);
+$('selTheme').onchange = () => {
+  store.set('theme', $('selTheme').value);
+  applyTheme($('selTheme').value);
+  say('Theme set to ' + $('selTheme').value + '.');
+};
+try {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if ($('selTheme').value === 'auto') applyTheme('auto');
+  });
+} catch (e) { /* older browsers simply will not follow the system live */ }
+
+// --------------------------------------------------------- other preferences
+[['chkVerify', true], ['chkCompare', true], ['chkAutoBackup', true],
+ ['chkLegacy', false], ['chkSelOnly', true]].forEach(([id, dflt]) => {
+  $(id).checked = store.get(id, dflt);
+  $(id).addEventListener('change', () => store.set(id, $(id).checked));
+});
+syncSelOnly();
+
+{
+  const w = store.get('railWidth', null);
+  if (w) document.documentElement.style.setProperty('--rail', w + 'px');
+}
+
+// ------------------------------------------------------------------ menus
+function closeMenus(except) {
+  document.querySelectorAll('.menuitems').forEach((m) => {
+    if (m === except) return;
+    m.hidden = true;
+    const b = m.previousElementSibling;
+    if (b) b.setAttribute('aria-expanded', 'false');
+  });
+}
+[['btnToolsMenu', 'menuTools']].forEach(([b, m]) => {
+  $(b).onclick = (e) => {
+    e.stopPropagation();
+    const panel = $(m), open = panel.hidden;
+    closeMenus(open ? panel : null);
+    panel.hidden = !open;
+    $(b).setAttribute('aria-expanded', String(open));
+  };
+});
+document.addEventListener('click', () => closeMenus(null));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(null); });
+document.querySelectorAll('.menuitems').forEach((m) => {
+  m.addEventListener('click', (e) => { if (e.target.closest('.btn')) closeMenus(null); });
+});
+
+// -------------------------------------------------------------------- wire
+$('btnConnect').onclick = () => (S.port ? disconnect() : connect());
+$('btnRead').onclick = readRadio;
+$('btnWrite').onclick = writeRadio;
+$('fmList').addEventListener('change', applyFm);
+$('fmVfo').addEventListener('change', applyFm);
+$('log').dataset.empty = '1';
+meterInit();
+startEmpty();
+window.addEventListener('beforeunload', (e) => {
+  if (S.dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TH-2000 compare</title>
+<style>
+:root{
+  --panel:#E4E8EA; --face:#EFF2F3; --recess:#C9D1D6; --edge:#AEB9C0;
+  --ink:#171C21; --ink-2:#5A6670; --ink-3:#8794A0;
+  --rx:#0E6E86; --tx:#BE3227; --warn:#8A5A10; --warn-bg:#F5E6C8;
+  --surface:#fff; --line:#DDE2E5;
+  --row-hover:#DCE4E8; --row-sel:#CBDDE3;
+  --btn-a:#fff; --btn-b:#E7EBED; --btn-hover-b:#DCE2E5;
+  --bad-bg:#FBEDEB; --bad-ink:#8C241C;
+  --good-bg:#E6F1F3; --good-ink:#0B5566;
+  --shadow:rgba(0,0,0,.18); --drop-over:#DCE9ED; --sheen:#fff;
+
+  color-scheme:light;
+  accent-color:#0E6E86;
+
+  --mono:ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark; accent-color:#4FB4CE;
+  --panel:#191F24; --face:#212930; --recess:#2A333A; --edge:#3B464E;
+  --ink:#E3E9ED; --ink-2:#A3B0B9; --ink-3:#7A8892;
+  --rx:#4FB4CE; --tx:#E4685D; --warn:#D8A756; --warn-bg:#3A3122;
+  --surface:#1A2126; --line:#333D45;
+  --row-hover:#2A343B; --row-sel:#28414A;
+  --btn-a:#2B343B; --btn-b:#232B31; --btn-hover-b:#313B43;
+  --bad-bg:#3A2523; --bad-ink:#F0A69D;
+  --good-bg:#13333B; --good-ink:#8FD3E4;
+  --shadow:rgba(0,0,0,.55); --drop-over:#22343A; --sheen:rgba(255,255,255,.05);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--panel);color:var(--ink);font:14px/1.45 var(--ui);
+  display:flex;flex-direction:column}
+.legend{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--rx);outline-offset:2px}
+
+.panel{background:var(--face);border-bottom:1px solid var(--edge);padding:10px 16px;
+  display:flex;gap:14px 18px;align-items:center;flex-wrap:wrap}
+.plate{display:flex;flex-direction:column;line-height:1.15}
+.plate b{font:600 16px/1.1 var(--mono)}
+.plate span{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.btn{border:1px solid var(--edge);background:linear-gradient(var(--btn-a),var(--btn-b));border-radius:3px;
+  padding:6px 12px;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.btn:hover:not(:disabled){background:linear-gradient(var(--btn-a),var(--btn-hover-b))}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn.go{color:var(--rx);border-color:#8FB4BF}
+.spacer{flex:1}
+
+main{flex:1;display:flex;flex-direction:column;min-height:0;overflow:auto}
+
+/* two panes */
+.panes{display:grid;grid-template-columns:1fr auto 1fr;gap:0;border-bottom:1px solid var(--edge)}
+.pane{padding:12px 16px;min-width:0}
+.pane.right{border-left:1px solid var(--edge)}
+.swapwrap{display:flex;align-items:center;padding:0 8px;background:var(--face);
+  border-left:1px solid var(--edge)}
+.drop{border:2px dashed var(--edge);border-radius:4px;padding:18px 14px;text-align:center;
+  background:var(--face);cursor:pointer;transition:background .12s,border-color .12s}
+.drop.over{border-color:var(--rx);background:var(--drop-over)}
+.drop.loaded{border-style:solid;background:var(--surface);text-align:left;padding:12px 14px}
+.drop h3{margin:0 0 3px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.drop .fn{font:600 13px/1.3 var(--mono);word-break:break-all}
+.drop dl{margin:8px 0 0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11.5px}
+.drop dt{color:var(--ink-3)}
+.drop dd{margin:0;font-family:var(--mono);font-size:11.5px}
+.tagline{margin:6px 0 0;font-size:11px;color:var(--ink-3)}
+.protected{color:var(--warn)}
+@media(prefers-reduced-motion:reduce){.drop{transition:none}}
+
+/* diff */
+section.block{padding:12px 16px;border-bottom:1px solid var(--edge)}
+section.block h2{margin:0 0 8px;font-size:10px;font-weight:600;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-2);display:flex;align-items:center;gap:12px}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.controls label{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-2)}
+table{border-collapse:collapse;width:100%;font:11.5px/1.5 var(--mono)}
+thead th{position:sticky;top:0;background:var(--recess);border-bottom:1px solid var(--edge);
+  padding:5px 8px;text-align:left;white-space:nowrap;
+  font:600 10px/1.4 var(--ui);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2)}
+tbody td{padding:2px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--row-hover)}
+tbody tr.pick{background:var(--row-sel)}
+.tablewrap{max-height:320px;overflow:auto;border:1px solid var(--edge);background:var(--surface)}
+.empty{padding:22px 14px;text-align:center;color:var(--ink-3);font-size:12.5px}
+.bits{color:var(--tx)}
+.val{color:var(--rx)}
+
+/* record + log */
+.record{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.record .f{flex:1;min-width:240px;display:flex;flex-direction:column;gap:3px}
+.record label{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.record input{border:1px solid var(--edge);border-radius:2px;padding:6px 8px;font:13px/1.2 var(--ui);background:var(--surface);color:inherit}
+.hint{margin:8px 0 0;font-size:11.5px;color:var(--ink-2)}
+.log{margin:0;padding:0;list-style:none}
+.log li{border:1px solid var(--edge);background:var(--surface);border-radius:3px;padding:8px 10px;margin-bottom:6px}
+.log .what{font-weight:600;font-size:13px}
+.log .meta{font-size:11px;color:var(--ink-3);margin-top:2px}
+.log pre{margin:6px 0 0;font:11px/1.5 var(--mono);white-space:pre;overflow:auto;
+  background:var(--face);border:1px solid var(--edge);padding:6px 8px;max-height:150px}
+.log .rm{float:right;border:0;background:transparent;cursor:pointer;color:var(--ink-3);
+  font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.log .rm:hover{color:var(--tx)}
+.note{margin:0 0 10px;padding:7px 9px;border-left:3px solid var(--warn);background:var(--warn-bg);
+  font-size:11.5px;color:var(--warn)}
+.status{border-top:1px solid var(--edge);background:var(--face);padding:7px 16px;font-size:12px}
+.status.bad{background:var(--bad-bg);color:var(--bad-ink)}
+.status.good{background:var(--good-bg);color:var(--good-ink)}
+.file{display:none}
+@media(max-width:900px){.panes{grid-template-columns:1fr}.pane.right,.swapwrap{border-left:0;border-top:1px solid var(--edge)}}
+</style>
+</head>
+<body>
+
+<header class="panel">
+  <div class="plate"><b>TH-2000 compare</b><span>codeplug mapping notebook</span></div>
+  <span class="spacer"></span>
+  <span class="legend" id="count">no observations yet</span>
+  <button class="btn" id="btnExport" disabled>Export log</button>
+  <button class="btn" id="btnClearLog" disabled>Clear log</button>
+</header>
+
+<main>
+  <div class="panes">
+    <div class="pane">
+      <div class="drop" id="dropA" tabindex="0" role="button" aria-label="Load the baseline codeplug">
+        <h3>Left &mdash; baseline</h3>
+        <p class="tagline">Drop your original backup here, or click to browse.</p>
+        <p class="tagline protected">Nothing is ever written to these files.</p>
+      </div>
+    </div>
+    <div class="swapwrap"><button class="btn" id="btnSwap" disabled title="Swap the two sides">&#8646;</button></div>
+    <div class="pane right">
+      <div class="drop" id="dropB" tabindex="0" role="button" aria-label="Load the changed codeplug">
+        <h3>Right &mdash; after your change</h3>
+        <p class="tagline">Drop the file you saved after changing one setting.</p>
+      </div>
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>Differences <span class="legend" id="diffCount"></span></h2>
+    <div class="controls">
+      <label><input type="checkbox" id="chkSkipCh" checked> Hide channel bytes</label>
+      <label><input type="checkbox" id="chkOnlyPicked"> Record only ticked rows</label>
+      <button class="btn" id="btnAll">Tick all</button>
+      <button class="btn" id="btnNone">Tick none</button>
+      <button class="btn" id="btnPromote" disabled title="Use the right-hand file as the new baseline">Right &rarr; baseline</button>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th></th><th>Address</th><th>Offset</th><th>Region</th><th>Before</th><th>After</th><th>Bits</th><th>Value</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="emptyMsg">Load a file on each side to see what differs.</div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Record what you changed</h2>
+    <div class="record">
+      <div class="f">
+        <label for="what">What did you change in the manufacturer's software?</label>
+        <input id="what" placeholder="e.g. Squelch level 0 to 3" autocomplete="off">
+      </div>
+      <button class="btn go" id="btnRecord" disabled>Record</button>
+    </div>
+    <p class="hint">One setting per comparison gives the cleanest answer. After
+    recording, press <b>Right &rarr; baseline</b> and change the next setting.</p>
+    <p class="hint"><b>Bits</b> shows what actually moved, which can be narrower
+    than the field. Changing a value from 0 to 3 in a three-bit field only moves
+    two bits. Record the same setting at two or three different values and the
+    full width becomes obvious.</p>
+  </section>
+
+  <section class="block">
+    <h2>Log</h2>
+    <p class="note" id="unsaved" style="display:none">Observations live in this page only.
+    Export before you close the tab.</p>
+    <ul class="log" id="logList"></ul>
+    <p class="hint" id="logEmpty">Nothing recorded yet.</p>
+  </section>
+</main>
+
+<footer class="status" id="status">Drop your original backup on the left and a changed file on the right.</footer>
+
+<input type="file" class="file" id="fileA" accept=".icf,.img,.bin,.dat">
+<input type="file" class="file" id="fileB" accept=".icf,.img,.bin,.dat">
+
+<script src="th2000-core.js"></script>
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const T = window.TH2000;
+if (!T) {
+  document.body.insertAdjacentHTML('afterbegin',
+    '<p class="note"><b>th2000-core.js did not load.</b> Use the single-file build '
+    + '<code>th2000-compare.html</code>, or put th2000-core.js beside this page.</p>');
+  throw new Error('th2000-core.js not loaded');
+}
+
+const S = { a: null, b: null, rows: [], picked: new Set(), log: [] };
+
+/* Follows the theme chosen in the programmer, stored under the same key. */
+(function () {
+  let choice = 'auto';
+  try {
+    const v = window.localStorage.getItem('th2000.theme');
+    if (v !== null) choice = JSON.parse(v);
+  } catch (e) { /* storage unavailable: fall back to the system setting */ }
+  let dark = choice === 'dark';
+  if (choice === 'auto') {
+    try { dark = window.matchMedia('(prefers-color-scheme: dark)').matches; }
+    catch (e) { dark = false; }
+  }
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+})();
+
+function say(t, kind) { $('status').textContent = t; $('status').className = 'status' + (kind ? ' ' + kind : ''); }
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const hx = (v) => v.toString(16).toUpperCase().padStart(2, '0');
+const stamp = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+// ------------------------------------------------------------- file loading
+async function readFile(f) {
+  const buf = new Uint8Array(await f.arrayBuffer());
+  let bytes, kind;
+  if (/\.icf$/i.test(f.name) || buf[0] === 0x43 /* 'C' of COM1 */) {
+    let text = '';
+    for (const b of buf) text += String.fromCharCode(b);
+    const p = T.icfParse(text);
+    bytes = p.bytes; kind = p.records + ' records';
+  } else {
+    if (buf.length < T.MEM_SIZE) throw new Error('only ' + buf.length + ' bytes; a codeplug is ' + T.MEM_SIZE);
+    bytes = buf; kind = 'raw image';
+  }
+  const cp = new T.Codeplug(bytes);
+  return { name: f.name, size: f.size, kind, cp,
+    used: cp.channels().filter((c) => c.used).length, poweron: cp.powerOnName };
+}
+
+function paneHtml(side, d) {
+  const title = side === 'a' ? 'Left &mdash; baseline' : 'Right &mdash; after your change';
+  return '<h3>' + title + '</h3><div class="fn">' + esc(d.name) + '</div>'
+    + '<dl><dt>size</dt><dd>' + d.size + ' bytes, ' + esc(d.kind) + '</dd>'
+    + '<dt>power-on</dt><dd>' + esc(d.poweron || '\u2014') + '</dd>'
+    + '<dt>channels</dt><dd>' + d.used + ' in use</dd></dl>'
+    + (side === 'a' ? '<p class="tagline protected">Never written to.</p>' : '');
+}
+
+async function load(side, file) {
+  try {
+    const d = await readFile(file);
+    S[side] = d;
+    const el = $(side === 'a' ? 'dropA' : 'dropB');
+    el.classList.add('loaded');
+    el.innerHTML = paneHtml(side, d);
+    say('Loaded ' + d.name + ' on the ' + (side === 'a' ? 'left' : 'right') + '.', 'good');
+    recompute();
+  } catch (e) {
+    say('Could not read ' + file.name + ': ' + e.message, 'bad');
+  }
+}
+
+function wireDrop(elId, inputId, side) {
+  const el = $(elId), input = $(inputId);
+  el.onclick = () => input.click();
+  el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } };
+  input.onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) load(side, f); };
+  ['dragenter', 'dragover'].forEach((n) => el.addEventListener(n, (e) => {
+    e.preventDefault(); e.stopPropagation(); el.classList.add('over');
+  }));
+  ['dragleave', 'drop'].forEach((n) => el.addEventListener(n, (e) => {
+    e.preventDefault(); e.stopPropagation(); el.classList.remove('over');
+  }));
+  el.addEventListener('drop', (e) => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) load(side, f);
+  });
+}
+wireDrop('dropA', 'fileA', 'a');
+wireDrop('dropB', 'fileB', 'b');
+// a stray drop elsewhere should not navigate away
+['dragover', 'drop'].forEach((n) => window.addEventListener(n, (e) => e.preventDefault()));
+
+// -------------------------------------------------------------------- diff
+function recompute() {
+  const ready = S.a && S.b;
+  $('btnSwap').disabled = !ready;
+  $('btnPromote').disabled = !S.b;
+  if (!ready) { S.rows = []; renderRows(); return; }
+  S.rows = T.diffBits(S.a.cp, S.b.cp, { skipChannels: $('chkSkipCh').checked });
+  S.picked = new Set(S.rows.map((r) => r.addr));
+  renderRows();
+}
+
+function renderRows() {
+  const tb = $('rows'), empty = $('emptyMsg');
+  tb.innerHTML = '';
+  if (!S.a || !S.b) {
+    empty.style.display = ''; empty.textContent = 'Load a file on each side to see what differs.';
+    $('diffCount').textContent = ''; $('btnRecord').disabled = true; return;
+  }
+  if (!S.rows.length) {
+    empty.style.display = '';
+    empty.textContent = $('chkSkipCh').checked
+      ? 'No differences outside the channel area. Untick "Hide channel bytes" to look there too.'
+      : 'These two files are identical.';
+    $('diffCount').textContent = '0 bytes'; $('btnRecord').disabled = true; return;
+  }
+  empty.style.display = 'none';
+  $('diffCount').textContent = S.rows.length + ' byte' + (S.rows.length === 1 ? '' : 's');
+  const frag = document.createDocumentFragment();
+  for (const r of S.rows) {
+    const tr = document.createElement('tr');
+    tr.dataset.addr = r.addr;
+    if (S.picked.has(r.addr)) tr.className = 'pick';
+    const off = (r.addr >= T.ADDR_SETTINGS && r.addr < T.ADDR_SETTINGS + 32)
+      ? '+' + (r.addr - T.ADDR_SETTINGS) : '';
+    tr.innerHTML = '<td><input type="checkbox"' + (S.picked.has(r.addr) ? ' checked' : '') + '></td>'
+      + '<td>0x' + r.addr.toString(16).toUpperCase().padStart(4, '0') + '</td>'
+      + '<td>' + off + '</td><td>' + esc(r.region) + '</td>'
+      + '<td>' + hx(r.from) + ' ' + T.bin8(r.from) + '</td>'
+      + '<td>' + hx(r.to) + ' ' + T.bin8(r.to) + '</td>'
+      + '<td class="bits">' + esc(r.bitText) + '</td>'
+      + '<td class="val">' + r.fieldFrom + ' &rarr; ' + r.fieldTo + '</td>';
+    frag.appendChild(tr);
+  }
+  tb.appendChild(frag);
+  updateRecordState();
+}
+
+$('rows').addEventListener('click', (e) => {
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  const addr = +tr.dataset.addr;
+  if (S.picked.has(addr)) S.picked.delete(addr); else S.picked.add(addr);
+  tr.classList.toggle('pick', S.picked.has(addr));
+  const cb = tr.querySelector('input');
+  if (cb) cb.checked = S.picked.has(addr);
+  updateRecordState();
+});
+$('btnAll').onclick = () => { S.picked = new Set(S.rows.map((r) => r.addr)); renderRows(); };
+$('btnNone').onclick = () => { S.picked = new Set(); renderRows(); };
+$('chkSkipCh').onchange = recompute;
+$('chkOnlyPicked').onchange = updateRecordState;
+
+$('btnSwap').onclick = () => {
+  const t = S.a; S.a = S.b; S.b = t;
+  $('dropA').innerHTML = paneHtml('a', S.a);
+  $('dropB').innerHTML = paneHtml('b', S.b);
+  recompute();
+  say('Swapped sides.');
+};
+$('btnPromote').onclick = () => {
+  S.a = S.b; S.b = null;
+  $('dropA').innerHTML = paneHtml('a', S.a);
+  const el = $('dropB');
+  el.classList.remove('loaded');
+  el.innerHTML = '<h3>Right &mdash; after your change</h3>'
+    + '<p class="tagline">Drop the file you saved after changing one setting.</p>';
+  recompute();
+  say('That file is now the baseline. Change the next setting and drop the result on the right.', 'good');
+};
+
+// ------------------------------------------------------------------ record
+function currentRows() {
+  return $('chkOnlyPicked').checked ? S.rows.filter((r) => S.picked.has(r.addr)) : S.rows;
+}
+function updateRecordState() {
+  $('btnRecord').disabled = !(S.a && S.b && currentRows().length && $('what').value.trim());
+}
+$('what').addEventListener('input', updateRecordState);
+
+$('btnRecord').onclick = () => {
+  const rows = currentRows();
+  if (!rows.length) return;
+  S.log.push({
+    what: $('what').value.trim(),
+    left: S.a.name, right: S.b.name,
+    when: stamp(),
+    rows: rows.map((r) => ({ addr: r.addr, region: r.region, from: r.from, to: r.to,
+      bits: r.bits.slice(), bitText: r.bitText, fieldFrom: r.fieldFrom, fieldTo: r.fieldTo }))
+  });
+  $('what').value = '';
+  updateRecordState();
+  renderLog();
+  say('Recorded. ' + S.log.length + ' observation' + (S.log.length === 1 ? '' : 's') + ' so far \u2014 export before you close the tab.', 'good');
+};
+
+function renderLog() {
+  const list = $('logList');
+  list.innerHTML = S.log.map((e, i) =>
+    '<li><button class="rm" data-rm="' + i + '">remove</button>'
+    + '<div class="what">' + (i + 1) + '. ' + esc(e.what) + '</div>'
+    + '<div class="meta">' + esc(e.left) + ' \u2192 ' + esc(e.right) + ' &middot; ' + e.when
+    + ' &middot; ' + e.rows.length + ' byte' + (e.rows.length === 1 ? '' : 's') + '</div>'
+    + '<pre>' + esc(tableFor(e.rows)) + '</pre></li>').join('');
+  $('logEmpty').style.display = S.log.length ? 'none' : '';
+  $('count').textContent = S.log.length
+    ? S.log.length + ' observation' + (S.log.length === 1 ? '' : 's')
+    : 'no observations yet';
+  $('btnExport').disabled = !S.log.length;
+  $('btnClearLog').disabled = !S.log.length;
+  $('unsaved').style.display = S.log.length ? '' : 'none';
+}
+$('logList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-rm]');
+  if (!b) return;
+  S.log.splice(+b.dataset.rm, 1);
+  renderLog();
+  say('Removed one observation.');
+});
+$('btnClearLog').onclick = () => {
+  if (S.log.length && !confirm('Discard all ' + S.log.length + ' observations?')) return;
+  S.log = []; renderLog(); say('Log cleared.');
+};
+
+function tableFor(rows) {
+  const head = 'addr    off  region                    before        after         bits       value';
+  const line = rows.map((r) => {
+    const off = (r.addr >= T.ADDR_SETTINGS && r.addr < T.ADDR_SETTINGS + 32)
+      ? '+' + (r.addr - T.ADDR_SETTINGS) : '';
+    return ['0x' + r.addr.toString(16).toUpperCase().padStart(4, '0'),
+      off.padEnd(4), r.region.slice(0, 24).padEnd(25),
+      (hx(r.from) + ' ' + T.bin8(r.from)).padEnd(13),
+      (hx(r.to) + ' ' + T.bin8(r.to)).padEnd(13),
+      r.bitText.padEnd(10), r.fieldFrom + ' -> ' + r.fieldTo].join(' ');
+  });
+  return [head, '-'.repeat(head.length)].concat(line).join('\n');
+}
+
+// ------------------------------------------------------------------ export
+function buildExport() {
+  const out = [];
+  out.push('TH-2000 codeplug mapping log');
+  out.push('generated ' + stamp());
+  out.push(S.log.length + ' observation' + (S.log.length === 1 ? '' : 's'));
+  out.push('');
+  out.push('Each entry is one change made in the manufacturer\u2019s software, with the');
+  out.push('bytes that moved as a result. "off" is the offset within the 32-byte');
+  out.push('settings block at 0x2020. "value" is the field read out of just those bits.');
+  out.push('');
+  S.log.forEach((e, i) => {
+    out.push('=== ' + (i + 1) + '. ' + e.what + ' ===');
+    out.push('baseline : ' + e.left);
+    out.push('changed  : ' + e.right);
+    out.push('recorded : ' + e.when);
+    out.push('');
+    out.push(tableFor(e.rows));
+    out.push('');
+  });
+  out.push('--- machine readable ---');
+  out.push(JSON.stringify(S.log.map((e) => ({
+    what: e.what, left: e.left, right: e.right, when: e.when,
+    rows: e.rows.map((r) => ({ addr: r.addr, region: r.region,
+      from: r.from, to: r.to, bits: r.bits, from_val: r.fieldFrom, to_val: r.fieldTo }))
+  })), null, 1));
+  return out.join('\n') + '\n';
+}
+
+$('btnExport').onclick = () => {
+  const text = buildExport();
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'th2000-mapping-' + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '') + '.txt';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  S.exported = S.log.length;
+  say('Exported ' + S.log.length + ' observation' + (S.log.length === 1 ? '' : 's') + '.', 'good');
+};
+
+window.addEventListener('beforeunload', (e) => {
+  if (S.log.length && S.exported !== S.log.length) { e.preventDefault(); e.returnValue = ''; }
+});
+
+renderLog();
+</script>
+</body>
+</html>

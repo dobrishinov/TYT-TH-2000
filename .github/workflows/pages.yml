@@ -1,0 +1,53 @@
+# Publishes site/ to GitHub Pages on every push to main.
+# Switch it on under Settings -> Pages -> Source -> GitHub Actions.
+name: Publish the web version
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check site/ is up to date with web/
+        run: |
+          cd web
+          python3 - <<'EOF'
+          import sys
+          core = open('th2000-core.js').read()
+          tag = '<script src="th2000-core.js"></script>'
+          stale = []
+          for src, dst in (('index.html', '../site/index.html'),
+                           ('compare.html', '../site/compare.html')):
+              built = open(src).read().replace(tag, '<script>\n' + core + '\n</script>', 1)
+              if built != open(dst).read():
+                  stale.append(dst)
+          if stale:
+              sys.exit('stale, rebuild before pushing: ' + ', '.join(stale))
+          print('site/ matches web/')
+          EOF
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
