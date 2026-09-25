@@ -1,4 +1,4 @@
-# TH-2000 CPS
+# TYT TH-2000 Web CPS & CHIRP Driver
 
 Open programming software for the **TYT TH-2000** amateur radio, also sold as
 the **UV-99**: a browser-based programmer that needs nothing installed, a CHIRP
