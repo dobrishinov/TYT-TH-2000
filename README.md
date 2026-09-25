@@ -7,11 +7,8 @@ driver, a Python library, and the documentation to rebuild any of it.
 Built by reverse engineering the manufacturer's own software, then checking
 every finding against a real radio.
 
-> **Try it in your browser:**
-> **https://YOUR-USERNAME.github.io/th2000-cps/**
->
-> *(replace with your own address once Pages is switched on — see
-> [Publishing the web version](#publishing-the-web-version))*
+> **Try TH-2000 CPS in your browser:**
+> **https://dobrishinov.github.io/TYT-TH-2000/**
 
 ---
 
